@@ -49,17 +49,16 @@
 \pagestyle{empty}
 
 \title{ %% {\it \huge Thesis Proposal}\\
-{\bf Awesome Work in Computer Science}}
-\author{Me}
-\date{January 3006}
-\Year{3006}
-\trnumber{}
+{\bf Object Detection Yay!}}
+\author{Vasu Agrawal}
+\date{\today}
+\Year{2019}
+\trnumber{still need to get TR number}
 
 \committee{
-Nearly Divine Personage, Chair \\
-Someone else \\
-Yet another person \\
-Someone from a strange and faraway land
+Sebastian Scherer, Chair \\
+Kris Kitani \\
+Rogerio Bonatti
 }
 
 \support{}
@@ -72,9 +71,9 @@ Someone from a strange and faraway land
 
 \maketitle
 
-\begin{dedication}
-For my dog
-\end{dedication}
+%\begin{dedication}
+%For my dog
+%\end{dedication}
 
 \pagestyle{plain} % for toc, was empty
 
@@ -117,9 +116,11 @@ My advisor is cool.
 %
 % Other than that, just make it look good...
 
-
-\chapter{Introduction}
-\chapter{Conclusion}
+\include{introduction}
+\include{hardware}
+\include{software}
+\include{experiments}
+\include{conclusion}
 
 %\appendix
 %\include{appendix}
