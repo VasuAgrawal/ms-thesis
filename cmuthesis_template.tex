@@ -32,7 +32,11 @@
 \usepackage[backref,pageanchor=true,plainpages=false, pdfpagelabels, bookmarks,bookmarksnumbered,
 %pdfborder=0 0 0,  %removes outlines around hyper links in online display
 ]{hyperref}
-\usepackage{subfigure}
+%\usepackage{subfigure}
+\usepackage{caption}
+\usepackage{subcaption}
+
+\graphicspath{ {images/} }
 
 % Approximately 1" margins, more space on binding side
 %\usepackage[letterpaper,twoside,vscale=.8,hscale=.75,nomarginpar]{geometry}
@@ -49,7 +53,7 @@
 \pagestyle{empty}
 
 \title{ %% {\it \huge Thesis Proposal}\\
-{\bf Object Detection Yay!}}
+{\bf Ground Up Design and Implementation of a Multi-modal Object Detection and Localization System}}
 \author{Vasu Agrawal}
 \date{\today}
 \Year{2019}
@@ -81,14 +85,30 @@ Rogerio Bonatti
 %% into different files and input them into this file...
 
 \begin{abstract}
-A short summary.
+\begin{enumerate}
+	\item People (first responders and warfighters) need to gain rapid situational awareness about unknown subterranean environments.
+	\item This is typically done by sending people in.
+	\item These environments are very poor (rough terrain, terrible lighting, etc), making it difficult for standard robots / robot algorithms.
+	\item This work presents the development of a multimodal object detection and localization system.
+	\item Specifically, we cover the development of two iterations of a modular sensing platform, algorithms to detect and localize artifacts across multiple sensing modalities, and data transmission techniques to ensure timely updates for human operators.
+	\item We show that the use of multiple sensors and sensing modalities is necessary and advantageous in detecting and localizing objects as a form of situational awareness in these difficult underground environments.
+	\item Also, this localization system is aware of slam updates / key poses, and can maintain global consistency with the SLAM setup.
+	\item Final evaluations are provided against the DARPA SubT challenge tunnel circuit environment ground truth.
+\end{enumerate}
 \end{abstract}
 
 \begin{acknowledgments}
-My advisor is cool.
+\begin{itemize}
+	\item George
+	\item Ratnesh
+	\item thesis committee
+	\item subt team / airlab
+	\item kosbie / 112 squad
+	\item roboclub people
+	\item darpa subt challenge for paying for this?
+	\item Justin also wanted to be acknowledged for putting up with me
+\end{itemize}
 \end{acknowledgments}
-
-
 
 \tableofcontents
 \listoffigures
