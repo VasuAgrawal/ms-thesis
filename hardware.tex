@@ -184,7 +184,7 @@ Table \ref{sensor_utility_categories} indicates that while there is some redunda
 	
 	When comparing synchronization ability, it appeared at first glance that both cameras supported external frame triggering, which allows frame capture to be driven by an external clock. This feature had previously been validated on the UI cameras in other lab projects. However, upon closer inspection it appeared that the external trigger for the RealSense module only applied to the depth module, and use of the external trigger would remove the synchronization between the RGB and depth modules on the RealSense camera. Similarly, when comparing shutter types, it appeared at first glance that both cameras had global shutters. This has also been previously validated on the UI cameras in other lab projects. However, further investigation revealed that the RealSense had a global shutter only for the 2 IR cameras used to compute depth, with the RGB camera instead having a rolling shutter.
 	
-	After this experiment, we decided to choose the RealSense D435 module for the Mk. 0 payload. We believed that the increase in low light image quality would outweigh the lack of external triggering and RGB camera rolling shutter. Additionally, the RealSense contained a depth module which eliminated the need for the selection of a separate depth camera. The RealSense also beat the UI camera in other payload goals - its price was less than half that of the UI camera, had shorter lead times which would allow for more rapid development, and had an enclosure which would simplify keeping the payload environmentally robust compared to the bare UI camera board.
+	After this experiment, we decided to choose the RealSense D435 module for the Mk. 0 payload. We believed that the increase in low light image quality would outweigh the lack of external triggering and RGB camera rolling shutter. Additionally, the RealSense contained a depth module which eliminated the need for the selection of a separate depth camera. The RealSense also beat the UI camera in other payload goals - its price was less than half that of the UI camera, had shorter lead times which would allow for more rapid development, and had an enclosure which would simplify keeping the payload environmentally robust compared to the bare UI camera board. We intended to use 4 RealSense modules, arranged approximately in a square to give us a nearly 360 degree horizontal field of view with the RGB cameras.
 	
 	% TODO(vasua): Is there a better place for this to go? Maybe a footnote?
 	It should be noted that after this experiment was performed, it was discovered that the RealSense firmware version used had a bug when setting manual gain which lowered the maximum possible gain value. The automatic gain feature did not have this bug, which could explain why the RealSense image with automatic gain in \ref{auto_realsense_2} appears significantly brighter.
@@ -200,7 +200,76 @@ Table \ref{sensor_utility_categories} indicates that while there is some redunda
 		
 \end{description}
 
-\subsection{Miscellaneous}
+\subsection{Supporting Components}
+
+In order to connect the selected sensors and computers together, a few other major components needed to be selected. 
+
+\begin{description}
+	\item[Lighting] While the low light performance of the RealSense RGB camera was considered acceptable, adding additional lighting to the payload would enable images to be captured with lower noise, as well as allow for lower exposure times which could help decrease motion blur. Additional lighting would also be required for successful object detection in completely dark environments, which was to be expected in subterranean environments. We selected the 5000K LED from the Opulent XHP70A series of LEDs, mounted on a starboard for ease of integration. This particular LED was selected for having the highest rated luminous flux of all LEDs we were able to find with the starboard form factor, at the target voltage of 12V. 2 LEDs would be used per camera for increased brightness, as well as some redundancy in the case of failure of one of the LEDs.
+	
+	We had originally intended to flash the LEDs with each frame exposure of the RGB camera. Doing so would require some way of determining when the frame exposure was happening. The RealSense D435 had an expansion header with 9 pins, 1 of which was intended to enable synchronization of multiple depth modules. Probing the other pins with an oscilliscope did not indicate any signals that could be used to flash the LEDs. However, we discovered that the depth synchronization pin was simply a repeating 1.8V 50$\mu$s pulse. The RealSense documentation was shortly updated to indicate that this pulse occurred slightly after the end of the depth frame exposure. By manually setting the camera framerate and depth exposure time, and using the assumption that the start of the RGB and depth frame times were synchronized (nominally, the depth camera was triggered by the RGB camera when running in the default mode), we could calculate the start of the next RGB frame with the following equation:
+	
+	\begin{equation} \label{led_flashing_eq}
+	t_{rgb+1} = t_{depth} - t_{delay} - t_{exposure} + t_{frame}
+	\end{equation}
+	
+	where $t_{rgb+1}$ is the start of exposure of the next RGB frame, $t_{depth}$ is the time of the start of the depth pulse, $t_{delay}$ is the delay between the end of depth exposure and the start of the depth pulse, $t_{exposure}$ is the exposure time of the depth frame, and $t_{frame}$ is the period of the camera frames. $t_{delay}$ was estimated by looking at the difference between the end of the depth projector control signal (in green) and the start of the depth pulse (in yellow), as shown in Figure \ref{realsense_delay}. We set $t_{exposure}$ to 100 $\mu$s. This method may not be accurate, but we believe it is approximately the correct order of magnitude, and can be considered negligible compared to the frame period in the 10s of milliseconds.
+	
+	\begin{figure}
+		\centering
+		\begin{subfigure}{0.3\textwidth}
+			\includegraphics[width=\textwidth]{realsense_trigger.png}
+			\caption{1.8V 50$\mu$s pulse after depth frame}
+			\label{realsense_trigger}
+		\end{subfigure}		
+		\hfill
+		\begin{subfigure}{0.3\textwidth}
+			\includegraphics[width=\textwidth]{realsense_delay.png}
+			\caption{Measurement used to estimate $t_{delay}$}
+			\label{realsense_delay}		
+		\end{subfigure}
+		\hfill
+		\begin{subfigure}{0.3\textwidth}
+			\includegraphics[width=\textwidth]{multiple_triggers.png}
+			\caption{Depth triggers generated for each frame}
+			\label{multiple_triggers}
+		\end{subfigure}	
+		\caption[Oscilliscope measurements of RealSense D435 depth trigger]{Oscilliscope measurements of RealSense D435 depth trigger. The depth pulse is shown in yellow. The IR projector control signal is shown in green.}
+		\label{realsense_scope}
+	\end{figure}	
+	
+	To implement the LED flashing, the depth pulse was wired into an interrupt pin on a microcontroller. The interrupt triggered a timer which would sleep until the start of the next RGB frame exposure, as calculated in \ref{led_flashing_eq}. At the start of the frame, the LEDs would be turned on, and a second timer was initialized to turn the LEDs off after a specified period. The LEDs were controlled with the LED driver's dimming functionality, set to either maximum brightness or off. The LED driver selected was the BuckBlock A009, a constant current LED driver capable of supplying 2.1A at up to 16V, which was sufficient to drive 2 of the selected LEDs at their rated brightness when wired in parallel. 
+	
+	Unfortunately, the LED flashing created artifacts in the RGB camera image. We believed the streaking visible in Figure \ref{strobe_images} was a result of the rolling shutter. Though each row in the RGB image may be exposing for less time than the frame period, the rows are being scanned sequentially, over the duration of the frame period. This means that if the LEDs are on for less time than the frame period, certain rows (depending on the exposure time set by the autoexposure algorithm) will not expose while the LEDs are on, resulting in a dark streak as seen in the figure. The specific dark rows are a function of the phase offset between the LED pulse and the rolling shutter. As a result, we decided we would not integrate LED flashing in Mk. 0, choosing instead to leave them on constantly. This meant that each side would not need to be controlled independently, allowing us to eliminate the LED driver in favor of a 12V constant voltage source. The connection of the voltage source to the LEDs was controlled by a switch to allow a user to disable the bright LEDs when not in use.
+			
+	\begin{figure}
+		\centering
+		\begin{subfigure}{0.3\textwidth}
+			\includegraphics[width=\textwidth]{strobe_1.png}
+			\caption{Dark stripe at top of image}
+			\label{strobe_top}
+		\end{subfigure}		
+		\hfill
+		\begin{subfigure}{0.3\textwidth}
+			\includegraphics[width=\textwidth]{strobe_4.png}
+			\caption{Dark stripe in middle of image}
+			\label{strobe_middle}		
+		\end{subfigure}
+		\hfill
+		\begin{subfigure}{0.3\textwidth}
+			\includegraphics[width=\textwidth]{strobe_6.png}
+			\caption{Dark stripe at bottom of image}
+			\label{strobe_bottom}
+		\end{subfigure}	
+		\caption[Dark lines in RealSense RGB images with LED flashing]{Dark lines are generated in the RealSense RGB images as a result of flashing the LEDs. The different locations of the dark stripes are caused by phase offsets between the LED pulse and the frame exposures.}
+		\label{strobe_images}
+	\end{figure}	
+			
+			
+	\item[Networking] TODO
+	\item[Power]
+	\item[Connectors] description
+\end{description}
 
 \begin{enumerate}
 	\item Computers (for both object detection and SLAM)
