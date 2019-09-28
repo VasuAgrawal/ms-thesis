@@ -264,19 +264,19 @@ In order to connect the selected sensors and computers together, a few other maj
 		\caption[Dark lines in RealSense RGB images with LED flashing]{Dark lines are generated in the RealSense RGB images as a result of flashing the LEDs. The different locations of the dark stripes are caused by phase offsets between the LED pulse and the frame exposures.}
 		\label{strobe_images}
 	\end{figure}	
-			
-			
-	\item[Networking] TODO
-	\item[Power]
-	\item[Connectors] description
+
+	\item[Networking] Inside the Mk. 0 payload, the NUC, Xavier, and LIDAR all needed to be connected together via Ethernet. Additionally, an Ethernet port needed to be exposed from the payload to enable data output. In the interest of compactness, we originally attempted to use a GigEthos Lite board from Gadgetsmyth, which promised to be a very light and small gigabit Ethernet switch. We successfully used the board inside the Mk. 0 payload for a few months, but experienced an unexpected failure after normal use. At that time, we replaced the GigEthos board with a stripped down commodity TP-Link gigabit Ethernet switch. We believe that the failure of the GigEthos board was due to insufficient cooling, and that the larger size of the TP-Link board has helped prevent these issues.
+	
+	\item[USB] The Mk. 0 payload contained a total of 6 USB sensors - 4 RealSense cameras, 1 thermal camera, and 1 IMU. All of the sensors except the IMU needed to plug into the Xavier. However, the Xavier carrier board being used (the developer kit carrier board) only had 3 USB ports - 2x 3.1 Gen 2 (10 Gb/s) Type C ports, and 1x 3.1 Gen 1 (5 Gb/s) Type A port. This meant that a USB hub was necessary. We selected the HB31C4AB hub from StarTech.com, which was the only USB Type C hub with 4x USB Type A inputs we were able to find capable of 10 Gb/s. Though the RealSense D435 cameras are only USB 3.1 Gen 1 (5 Gb/s) devices, which would limit the bus to 5 Gb/s, we chose a 10 Gb/s capable hub to allow for future expansion.
+	
+	\item[Power] The selected components for the Mk. 0 payload had a variety of different input voltage ranges and power requirements. The NUC, for example, was rated for supply voltages between 12V and 19V, though in our prior experience would be unstable at voltages below 13V. Meanwhile, the LEDs could be given no more than 12V in order to prevent over-current. We determined that 2 separate voltages, 12V and 18V, would be sufficient to power all components inside the payload. Unfortunately, neither of these voltages were available on our robot platforms. Additionally, placing strict requirements on the supply voltage would reduce the modularity of the payload, which would conflict with one of the major design goals. We decided to design the Mk. 0 payload for a nominal 24V supply, which was available as a regulated voltage on the ground robots, and internally regulate down to the desired voltages. The input ranges on the selected 150W 12V and 105W 18V regulators also enabled the payload to be powered by the 7s LiPo (25.9V - 29.4V) batteries that our drone platforms used.
+	
 \end{description}
 
-\begin{enumerate}
-	\item Computers (for both object detection and SLAM)
-	\item Sensing (both for SLAM and object detection), as well as sensor placement 
-	\item sensor synchronization (maybe not its own bullet?)
-	\item power management / distribution (everything in the box should be powered by a single cable)
-	\item connectors (internal and external) (including debugging)
-	\item heat dissipation (more of a mechanical problem)
-	\item mounting
-\end{enumerate}
+\section{Mk. 0 Assembly}
+
+As we were selecting components for the Mk. 0 payload, another member of our lab was designing an enclosure to house all of the components. Heat dissipation was an important design consideration, as we expected the payload to draw more than 250W at full load. This resulted in the payload being made of aluminum, and many parts being mounted directly to the frame to aid in heat dissipation. The completed version of Mk. 0 is shown in Figure, along with a few pictures of the internals.
+
+After the payload was assembled, it became apparent that Mk. 0 was going to be too large (at approximately 8" in each dimension, excluding the LIDAR) and too heavy (nearly 20 lbs with all components) to fly on any of our existing drone platforms. This meant that a separate drone payload needed to be created.
+
+\section{Drone Payload}
