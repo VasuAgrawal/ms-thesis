@@ -280,7 +280,7 @@ In order to connect the selected sensors and computers together, a few other maj
 \section{Mk. 0 Assembly}
 
 % TODO(vasua): Add pictures of Mk. 0 here.
-As we were selecting components for the Mk. 0 payload, another member of our lab was designing an enclosure to house all of the components. Heat dissipation was an important design consideration, as we expected the payload to draw more than 250W at full load. This resulted in the payload being made of aluminum, and many parts being mounted directly to the frame to aid in heat dissipation. Design consideration was also given to fabrication techniques. Almost all components were manufactured in-house, with the exception of side panels that were outsourced to a commercial waterjet facility. The completed version of Mk. 0 is shown in Figure.
+As we were selecting components for the Mk. 0 payload, another member of our lab, Yaoyu Hu, was designing an enclosure to house all of the components. Heat dissipation was an important design consideration, as we expected the payload to draw more than 250W at full load. This resulted in the payload being made of aluminum, and many parts being mounted directly to the frame to aid in heat dissipation. Design consideration was also given to fabrication techniques. Almost all components were manufactured in-house, with the exception of side panels that were outsourced to a commercial waterjet facility. The completed version of Mk. 0 is shown in Figure.
 
 After the payload was assembled, it became apparent that Mk. 0 was going to be too large (at approximately 8" in each dimension, excluding the LIDAR) and too heavy (nearly 20 lbs with all components) to fly on any of our existing drone platforms. This meant that a separate drone payload, likely with a reduced component count, would need to be created.
 
@@ -328,46 +328,88 @@ To resolve the thermal camera issues, we decided to use 2 of the FLIR Boson 640 
 % TODO(vasua): Verify this claim about not affecting realsense framerates
 After receiving the new thermal cameras, we connected them to the Xavier via the same HB31C4AB USB hub as used in Mk. 0. We were able to successfully stream from one of the thermal cameras at 60 Hz. However, when we attempted to stream from both cameras at once, we were only able to achieve a maximum frame rate of approximately 50 Hz on both of the thermal cameras. We determined that this was a result of the camera adapter board only exposing a USB 2.0 interface, limited to 480 Mb/s which, when considering transmission overhead is insufficient for the 2 thermal camera streams. Each frame is encoded as YV12, comprising 491520 bytes for each 640 x 512 image, resulting in a total usage of 472 Mb/s at 120 fps total. Luckily, we had already switched to using 2 separate USB hubs as a result of the upgrades to the RealSense camera system, allowing us to separate the thermal cameras onto 2 separate USB 2.0 busses. With this change, we were able to stream from both the thermal cameras at 60 fps, and did not affect the RealSense framerates when doing so.
 
-led problems:
+Satisfied with the changes to the thermal cameras for Mk. 1, we worked to improve the lighting system. We identified a few specific problems with the lighting setup on Mk. 0 we wanted to address:
+
 \begin{enumerate}
-	\item wanted to be able to synchroniz
-	\item LEDs flickered due to the constant voltage source, so we tried alice's boards instead. had to switch back to the buckblocks.
-	\item forgot to turn LEDs on one time, so we removed that feature and just tied directly to power.
+	\item The LEDs would constantly flicker. This flickering was not enough to be visible in the camera images, but it was sufficiently distracting for humans working with and around the robots that it needed to be fixed for Mk. 1.
+	\item LEDs were controlled by a switch. Part of our operational procedure was to ensure the LEDs had been switched on before deploying the robot. However, this step had been skipped during a few critical testing moments due to stress, preventing object detections from the RGB cameras in dark environments. Thus, we sought to make the LED control automatic in Mk. 1.
+	\item LED brightness was fixed. As a byproduct of powering all of the LEDs on Mk. 0 with a single 12V regulator behind a switch, we were unable to change the brightness of the LEDs (beyond the unintended flickering). While not explicitly necessary, we saw the ability to regulate brightness as useful for managing power consumption and heat production, and intended to add it for Mk. 1 as well.
 \end{enumerate}
 
-mechanical problems:
+% TODO(vasua): Add a picture of the PCB (and maybe the assembled one)
+Our first attempt at solving these problems was to use custom PCBs to drive the LEDs. The PCBs were designed by Alice Lai, an undergradate student on the team. Each PCB could drive the LEDs on a single side with the same voltage regulation strategy as used in Mk. 0. However, the PCB also contained a programmable microcontroller which allowed the Xavier to control the brightness of the LEDs by issuing i2c commands. Additionally, from our earlier work using the expansion header, we knew that the RealSense only produced trigger signals when streaming, allowing us to program the microcontroller to use the depth trigger signal to automatically determine if the LEDs should be turned on. Early testing indicated that the introduction of the PCB had successfully addressed all of the problems found in Mk. 0, and that it would be usable for Mk. 1. Unfortunately, we discovered a problem late in the development period which prevented us from using the boards in the final Mk. 1 assembly.
+
+For Mk. 0, we found that the 2 LEDs selected was sufficient to produce low noise images from the RealSense RGB cameras. However, when testing the higher framerate for Mk. 1, we saw a slight increase in noise that, while not catastrophic, we would prefer to avoid. Thus, we increased the number of LEDs per side from two to three for Mk. 1. By the time this change was made, the LEDs boards had already been manufactured. They had been tested and validated to properly drive 2 LEDs without flickering. While in theory the design allowed the boards to drive 3 LEDs as well, only about half of the manufactured boards were able to do so. The other boards experienced a variety of failure modes, ranging from constant illumination with significant to large periods of darkness. This forced us to abandon the custom PCBs for Mk. 1 in favor of another solution. We intend to revise the design for future iterations of the payload.
+
+Our backup solution was to revert back to the BuckBlock A009 LED drivers we had originally selected when testing LEDs for Mk. 0. While we did not have a way to programmatically adjust brightness with these drivers, we were able to attach a potentiometer to manually tune the current consumption to achieve a balance between heat production and light output. The LED driver produced a constant brightness with no apparent flickering, resolving another problem. Finally, we decided to wire the driver directly into the supply voltage of the payload without an inline switch to eliminate any possibility of forgetting to turn the lights on. An additional bonus of using the supply voltage directly was that we eliminated our dependence on the 12V regulator as a result. In Mk. 0, the LEDs were the only component which explicitly required 12V - all other components could be driven with 15 - 18V. James Teza, a Senior Research Engineer on the project, then designed a custom power distribution board which simplified wiring and used only a single 15V regulator to power all major components.
+
+Between the RealSense, thermal camera, and lighting upgrades, we believed we had addressed all major issues from the Mk. 0 payload. However, a few smaller items remained which are worth mentioning:
+
 \begin{enumerate}
-	\item manufacturing sucked
-	\item serviceability sucked
-	\item heat dissipation sucked
-	\item cooling was a problem on the last one, and we had a nuc fail as well, not necessarily thermal but keep everything cool.
+	\item The computer power buttons used on Mk. 0 were unreliable and did not indicate status of the computers. For Mk. 1, we switched to more rugged buttons which had integrated LEDs which we were able to use to indicate computer power status.
+	\item After the original GigEthos Lite Ethernet switch in Mk. 0 failed, it was replaced with a stripped down version of a commodity Ethernet switch. For Mk. 1, we chose to use an industrial grade gigabit Ethernet switch from Antaira with roughly the same form factor.
+	\item The RJ-45 cable bulkhead used on Mk. 0 did not lock Ethernet cables very tightly, potentially allowing them to disconnect under strong vibration. While we did not experience a failure here, we decided to create a custom connection with a locking connector from LEMO. This new connector had the added advantage of being significantly smaller than the RJ-45 bulkhead used on Mk. 0.
+	\item The cable for the LIDAR on Mk. 0 is passed through the case and wired directly into other components without a connector. This makes serviceability difficult should the LIDAR need to be replaced. For Mk. 1, we used a locking connector from LEMO to allow easier LIDAR removal and replacement.
 \end{enumerate}
 
-miscellaneous:
+Having worked through our issues with the existing components on the Mk. 0 payload, we looked to see what additional components we'd like to add to Mk. 1, if any. We were able to identify a few:
+
 \begin{enumerate}
-	\item buttons from the original ones sucked, so we replaced them with new ones.
-	\item wiring in general was complicated internally, especially for power. chose a different connector,  and used a 15v supply internally since the LEDs didn't need the constant voltage anymore
-	\item switch the ethernet switch for something more rugged with a better power connector, since the gigethos one failed.
-	\item switch to a different, better rj45 connector since the other one wasn't locking
-	\item velodyne cable should be switched for an actual connector so that it can be removed, in the case of us ever smashing another one ...
+	\item Wifi scanning on the Mk. 0 payload took on average 3-5 seconds for a complete scan. At our ground robots' average speed of 2 m/s, this meant the robot may have moved up to 10m during a scan, increasing error for our wifi-based localization. Thus, for Mk. 1 we added an Intel 8265 chip which supported both Bluetooth and Wifi scanning to the Xavier. This allowed Mk. 1 to scan at double the frequency of Mk. 0.
+	\item While Wifi and bluetooth scanning provided accurate presence detection for cell phones, it proved difficult to accurately localize devices with them when the robot was moving quickly. We added a microphone array to Mk. 1 to listen for audio produced by the cell phone artifacts, which DARPA had confirmed would be guaranteed. We selected the ReSpeaker Mic Array v2.0 from SeeedStudio, which provided 4 raw audio channels over USB.
+	\item The Mk. 0 payload had no way of communicating with or offering feedback to robot and payload operators. We wanted to include a speaker to have the option of providing audio feedback in Mk. 1. We selected the Large Surface Transducer from Adafruit instead of a traditional speaker in order to maintain environmental robustness on the payload.		
 \end{enumerate}
 
-components to add:
-\begin{enumerate}
-	\item we wanted a speaker
-	\item wifi / bluetooth scanning was somewhat slow with just one set of antennas. add a second wifi receiver in the xavier to accommodate.
-	\item wanted a microphone array for cell phone detection (put it in, didn't utilize it)
-	\item still no synchronization (led board was supposed to solve that)
-	\item still no gas sensor (tried BME sensor but didn't get it working)	
-\end{enumerate}
+After we updated the specification for Mk. 1's electronics, it, along with our feedback on the mechanical aspects of Mk. 0, was given to Nathaniel Shoemaker-Trejo, an Engineer on the project, to design an updated enclosure for. A diagram showing the various subsystems and their major components and connections is given in Figure \ref{mk_1_architecture}. Specifically, we asked him to improve the serviceability of Mk. 1, as well as improve the cooling system to prevent overheating of components. Mk. 1 would have more components than Mk. 0 (such as more LEDs), and would thus be denser than Mk. 0 as we did not want to significantly increase the footprint of the payload. Nathaniel returned with a design with a number of panels that could be independently removed for servicing and access to the internals of the payload. Additionally, components were laid out internally to optimize for airflow from 2 large fans on either side of the payload to improve thermal performance.
 
+\begin{figure}
+	\centering
+	\includegraphics[width=\textwidth]{mk_1_architecture.png}
+	\caption[Subsystem diagram for Mk. 1 payload]{Subsystem diagram for the Mk. 1 payload showing the major electrical components present. Fans are not depicted.}
+	\label{mk_1_architecture}
+\end{figure}
 
+\section{Summary of Payloads}
 
-problems to resolve for a future iteration:
-\begin{enumerate}
-	\item some light bleed / led glare on the realsense cameras. not sure why.
-	\item antennas need to be constantly checked since there's no way to force them to stay in their orientation
-	\item improved LED handling, yet again.
-	\item better speaker mounting? maybe use an actual speaker?
-	\item synchronization not addressed at all here
-\end{enumerate}
+As a result of the hardware development described in this chapter, we have built 3 distinct payloads. Each payload is capable of performing state estimation, path planning and navigation, and object detection and localization using multimodal sensor data. A summary of the relevant components of each payload for object detection and localization is given below:
+
+\begin{description}
+	\item[Drone Payload] \hfill
+	\begin{itemize}
+		\item Intel NUC8i7BEB
+		\item Velodyne VLP-16 Puck
+		\item RealSense D435 (front-facing)
+	\end{itemize}
+
+	\item[Mk. 0 Payload] \hfill
+	\begin{itemize}
+		\item Intel NUC8i7BEB
+		\item Nvidia Xavier with Developer Kit Carrier
+		\item Velodyne VLP-16 Puck
+		\item 4x RealSense D435 (front, back, left, right), up to 15 fps at 640 x 360 per camera
+		\item FLIR Boson 320 w/ 92 degree HFOV (front-facing)
+		\item 3.5mm audio input microphone
+		\item Wifi / Bluetooth scanning (NUC builtin 9560 module)
+	\end{itemize}	
+
+	\item[Mk. 1 Payload] \hfill
+	\begin{itemize}
+		\item Intel NUC8i7BEB
+		\item Nvidia Xavier with Developer Kit Carrier
+		\item Velodyne VLP-16 Puck
+		\item 4x RealSense D435 (front, back, left, right), up to 30 fps at 848 x 480 per camera
+		\item FLIR Boson 640 w/ 95 degree HFOV (front-left- and front-right-corner-facing)
+		\item ReSpeaker Microphone Array V2.0
+		\item 2x Wifi / Bluetooth scanning (NUC builtin 9560 module, Xavier 8265 module)
+	\end{itemize}
+\end{description}
+
+%problems to resolve for a future iteration:
+%\begin{enumerate}
+%	\item some light bleed / led glare on the realsense cameras. not sure why.
+%	\item antennas need to be constantly checked since there's no way to force them to stay in their orientation
+%	\item improved LED handling, yet again.
+%	\item better speaker mounting? maybe use an actual speaker?
+%	\item synchronization not addressed at all here
+%	\item gas sensor
+%\end{enumerate}
