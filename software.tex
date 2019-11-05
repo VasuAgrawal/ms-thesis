@@ -277,17 +277,56 @@ The object detection localizer consists of 3 main operations, separated into two
 
 \subsection{Results}
 
+- what even is there to show here?
+- maybe don't need a results section ...
+- this could talk about thoughts about the method? maybe that should be in a discussion section later
+
 \section{WiFi Scanner}
 
-TODO
+The WiFi scanner uses the WiFi modules on the NUC (Mk. 0, Mk. 1, drone) and the Xavier (Mk. 1) to search for nearby devices acting as access points. Scans are run using wpa\_supplicant and are run continuously. Each scan produces a list of nearby access points with a MAC address, SSID (if available), and an RSSI value. The scan results are timestamped with the completion time of the scan, are assigned a frame ID coincident with the LOAM sensor, and are published immediately. Each scan takes approximately 3 seconds to complete, and thus Mk. 0 and the drone payloads publish scan results at approximately .35 Hz while Mk. 1 is able to publish at approximately double the rate, between 0.6 - 0.8 Hz. Other WiFi interfaces are present on each robot, but are used for wireless communication. The process of WiFi scanning significantly reduces the available bandwidth for wireless communication and thus the WiFi scanner is only allowed to use interfaces which are otherwise unused.
 
 \section{Signal Localizer}
 
-TODO
+The signal localizer is produces Artifact Localizations for cell phone artifacts using the scan results from the WiFi scanner. A Bluetooth scanner was also implemented that could feed into the signal localizer, but was disabled due to low reliability. The structure of the signal localizer is quite similar to that of the object detection localizer, and thus it shares many of the same properties. Artifact Localizations are generated continually at 1 Hz, and are updated with new key pose information when available. When changes to the Artifact Localizations are significant, they are published to be used downstream.
+
+\subsection{Method}
+
+Like the object detection localizer, the signal localizer consists of 3 main operations, this time running in a single thread. The first two tasks maintain a data structure with key pose information and wifi scan results. The third task continually solves for positions of cell phone artifacts based on the scan results, and publishes Artifact Localizations for new detections or for significant position changes.
+
+\begin{description}
+	\item[Key Pose Maintenance] This task is functionally equivalent to the key pose maintenance task in the object detection localizer. Key poses are stored in a data structure alongside their timestamp and ID, and are updated with new poses from loop closures when available.
+	\item[Signal Reading Storage] This task serves a similar role to the object detection localizer's detection backpropagation task - to populate a data structure with sensor data to be used by a solver. DARPA guarantees that each cell phone artifact's access point will have an SSID of the form "PhoneArtifact\#\#", where \#\# is non-negative 2 digit integer. The scan result is filtered to remove all SSIDs which do not match the provided pattern. All remaining results are guaranteed to belong to a cell phone artifact. Using the timestamp of the scan result, the robot's sensor frame position is determined relative to the nearest key pose, in a manner similar to that in the object detection localizer. The transformation between the robot's sensor frame and the antennas is ignored. Each remaining scan result, consisting of a MAC address, SSID, and RSSI value, is stored with the robot's computed position in the corresponding key pose in the data structure.
+	\item[Signal Localization] Each cell phone artifact has a unique MAC address, which allows multiple readings for the same cell phone artifact to be aggregated together. Readings are gathered by MAC address and each group is processed sequentially in an identical manner. First, the stored position (which is relative to a key pose) is transformed to the robot's /map frame using updated key pose information. This creates a list of RSSI values at different locations, which is the setup for typical cell phone trilateration problems. However, treating the cell phone localization problem as one of trilateration requires a model to convert from RSSI to distance. While these models work well with line of sight between the transmitter and receiver, we were unable to obtain accurate distance estimates around multiple corners and through thick rock walls, and thus an alternate solution was implemented.
+	
+	The alternate solution relies on an important insight about the structure of the problem. We realized that the corridors in the tunnel circuit are quite narrow, meaning that the robot would, at some point, get within a meter or two of each artifact as it drove by them. Since the maximum allowable error for artifact positions was 5m, simply reporting the position of the robot with the highest RSSI value for each cell phone could be sufficient, using the assumption that RSSI was inversely proportional to the robot's distance from the artifact. This is the case for RSSI values from WiFi scanning, but is not true for Bluetooth. Results from Bluetooth scans would saturate the RSSI value when the robot was within approximately 20m of the cell phone, requiring a slightly more complex solution than simply finding the largest RSSI value.
+	
+	First, the received RSSI values and corresponding robot poses are sorted by timestamp. Then, the highest RSSI value is found, and the list of RSSI values is segmented into chunks where the RSSI values equal the max. For WiFi, this will typically be a single pose, and can be returned immediately. For Bluetooth, this is typically a set of values for each time the robot drove by the cell phone (e.g. going into and coming out of the tunnel). The midpoint of the arc formed by the robot poses in each set is then found. The midpoints for each set are averaged together and reported as the position of the cell phone artifact. After positions are determined for each cell phone artifact, they are compared against those from the previous iteration, and updates are published in a manner similar to the object detection localizer if any new cell phones are present, or if any have moved significantly.
+		
+\end{description}
+
+\subsection{Results}
+
+- should probably talk about results here too
+- what is there to talk about again? maybe some sort of analysis?
 
 \section{State Estimate Delay Estimator}
 
-TODO
+An implementation detail of LOAM is that the timestamps for the state estimates are based on a separate clock than other connected components. Subsecond precision for this clock comes from the IMU's internal clock, which starts counting from 0 at the IMU's startup, while the seconds count is derived from the NUC's system time on all payloads. This scheme results in an offset between the two clocks of between 0 and 1 seconds, with the NUC's system clock always being ahead. This offset is different with each initialization of the state estimation system, but is consistent for the duration of a run (1 - 2 hours). All other clocks in the system are synchronized to the NUC's system clock using Chrony, which results in an error on the order of hundreds of microseconds between clocks and is considered negligible.
+
+The state estimate delay estimator estimates the offset between the NUC's system clock and the state estimate clock and publishes the offset to be used by other nodes which use data from both the state estimate and other sensors. Subscribers subtract the published estimate from the timestamp of received sensor data when querying the robot or sensor pose corresponding to sensor data. The estimate is obtained by computing a moving average of the offset between the published timestamp and the NUC's system time for every fifth state estimate received on the 200 Hz \textbf{/integrated\_to\_map} topic. The estimate is published every update, resulting in an estimate rate of 10 Hz. The following equation was used to update the estimated delay:
+
+\begin{equation} \label{delay_estimate_equation}
+d_{now} = 0.9 \ d_{prev} + 0.1 \ (t_{now} - t_{state})
+\end{equation}
+
+where $d_{now}$ is the current delay estimate, $d_{prev}$ is the previous estimate (initialized to 0), $t_{now}$ is the current system time, and $t_{state}$ is the timestamp contained in the state estimate. An example output from this filter is shown in Figure \ref{multiple_delays}.
+
+\begin{figure}	
+	\centering
+	\includegraphics[width=\textwidth]{multiple_delays_screenshot.png}
+	\caption[Raw and filtered state estimation delay]{The plot shows delay estimates over a period of 60 seconds from a single run using the Mk. 1 payload. The red line shows the raw delay between the state estimate timestamp and the system time, $t_{now} - t_{state}$, at 200 Hz. The cyan line shows the filtered output using Equation \ref{delay_estimate_equation}, published at 10 Hz.}
+	\label{multiple_delays}
+\end{figure}
 
 \section{Artifact Aggregator}
 
