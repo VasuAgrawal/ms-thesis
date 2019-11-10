@@ -35,6 +35,18 @@ An overview of the complete pipeline is given in Figure \ref{software_overview}.
 % TODO(vasua): A better figure for what is inside an artifact localization?
 The pipeline consists of 2 major modules - the Signal Localizer and the Object Detection Localizer. Each module takes in various sensor data and produces Artifact Localizations, which are 3D coordinates in the robot's map frame that are believed to correspond to a desired artifact. These Artifact Localizations may contain additional evidence to be displayed to the human supervisor, such as images or point clouds of the artifact and surrounding environment. Artifact Localizations from both modules are combined inside the Artifact Aggregator and then transmitted to the base station to be displayed on the GUI. The human supervisor inspects artifacts displayed on the GUI and reports valid ones to DARPA.
 
+\begin{enumerate}
+	\item Time stamp (when the artifact was first discovered)
+	\item bool Valid (whether the artifact is valid. used for invalidations)
+	\item float x (robot /map frame x of localization point)
+	\item float y (robot /map frame y of localization point)
+	\item float z (robot /map frame z of localization point)
+	\item float confidence (classification confidence from 0 to 1)
+	\item uint class id (machine readable class ID)
+	\item uint report id (unique ID for this artifact, consistent across time from a single source)
+	\item array of images (images to support the detection, if any)	
+\end{enumerate}
+
 \section{LOAM Overview}
 
 One of the assumptions made during the initial design phases of the software pipeline was that LOAM would be the state estimation system used on all of our payloads. This simplified the development of the artifact detection and localization pipeline as we only needed to develop and test against a single state estimation system. The relevant interface details of LOAM (in the form of ROS frames and topics) are given below:
@@ -330,11 +342,55 @@ where $d_{now}$ is the current delay estimate, $d_{prev}$ is the previous estima
 
 \section{Artifact Aggregator}
 
-TODO
+% TODO: Link to metrics about lower accuracy
+The artifact aggregator combines Artifact Localizations from multiple sources into a single stream using two tasks. 
+
+\begin{description}
+	\item[Delta Listener] For efficiency, each source publishes Artifact Localizations as a series of deltas, rather than publishing the entire list of Artifact Localizations at each update. This task listens to the deltas from each source and accumulates them into a complete list of Artifact Localizations for each source. Unlike previous steps in the pipeline, no transformations between frames happen here as the individual sources are expected to publish artifacts in the /map frame and update via deltas when necessary.
+	\item[Filtering] Every second, the accumulated Artifact Localizations from each stream are combined using a similar clustering mechanism to the object detection localizer. First, the position of each Artifact Localization will be added to a point cloud. No transformation is necessary as all points are already in the /map frame. Then, the point cloud is clustered using PCL's Euclidean clustering with a cluster tolerance of 0.5m and a minimum cluster size of 1. The cluster tolerance was kept the same as the object detection localizer, but the minimum cluster size was reduced to 1 to not ignore any artifacts reported by any source.
+	
+	Artifact Localizations are combined based on their geometric clustering results. For each cluster, the classification of the new Artifact Localization is determined by summing the reported confidence from each constituent Artifact Localization and selecting the class with the highest confidence. The images for the new Artifact Localization were selected identically to the object detection localizer -- all images were sorted, and then 4 images were selected by choosing the first image in each fourth of the list. An example is shown in Figure \ref{automatically_selected_images}. The list of new Artifact Localizations is compared to the previous list of Artifact Localizations to determine a delta, which is published and transmitted to the base station.
+	
+\end{description}
 
 \section{Artifact Debouncer \& Compressor}
 
-TODO
+The artifact debouncer \& compressor is responsible for providing an efficient and reliable transmission mechanism for Artifact Localizations over the wireless communication link between each robot and the base station. Artifact Localization deltas from the artifact aggregator are used to generate a complete list of Artifact Localizations, each of which is initially marked as dirty. A number of strategies, outlined below, are used to determine which dirty Artifact Localizations should be transmitted to the base station.
+
+\begin{description}
+	\item[Compression] The images associated with each Artifact Localization are compressed before transmission. JPEG compression with a quality parameter of 95 is used for each image, resulting in images which are typically between 5 and 10 percent of the original image size in bytes. No other data associated with the Artifact Localization is compressed as its size (10s of bytes) is negligible compared to even the compressed images (each 50-100 kilobytes).
+	
+	\item[Retransmission] The lossy nature of the wireless communication link means that it is not guaranteed that transmitted packets will arrive at the other end. Thus, simply publishing a dirty Artifact Localization is insufficient to guarantee receipt at the base station. This is solved by attaching a timestamp to each transmission and having the receiving node at the base station publish an acknowledgment indicate that it received the Artifact Localization(s) sent at a particular timestamp. Upon receiving this acknowledgment, this node clears the dirty bit from each transmitted Artifact Localization if it was not updated since transmission. This acknowledgment may be dropped when sent via the wireless link as well. This is counteracted by retransmitting dirty Artifact Localizations from each robot until an acknowledgment is received.
+	
+	\item[Backoff] One reason for packets not reaching the base station may be that the robot is simply out of wireless communication range. Continually retrying transmission of dirty Artifact Localizations while out of communication range simply pollutes the wireless spectrum for other robots which may still be in range. Thus, linear backoff is employed. After each transmission attempt, an increasing predetermined time must pass before the dirty Artifact Localization can be transmitted again. The delay values are 5, 10, 15, 20, 25, and 30 seconds. Each transmission attempt increases the delay before the next transmission, up to a maximum of 30 seconds.
+	
+	\item[Debounce] As a robot drives by an artifact, the artifact will be detected in multiple consecutive camera frames. The object detection localizer will continually update the position of the artifact, and will publish updates every second while the robot drives by. The signal localizer does the same thing as the robot approaches a cell phone. These updates propagate through the artifact aggregator and result in a large number of updates published as the system converges on an estimate of the artifact's location and class. Forwarding each of these updates directly to the base station would be wasteful as another update would follow a second later. This node debounces artifact updates by only marking Artifact Localizations as dirty once an update has not been received for at least 3 seconds. This threshold was selected to allow for some false negatives in detection as the robot drives by an artifact, but to still be low enough to ensure timely delivery to the base station.
+	
+	\item[Grouping] Various factors, such as a loop closure event, can result in a large number of dirty Artifact Localizations that are ready to be transmitted. Towards the end of a robot's run, this can be close to 200 Artifact Localizations to transmit at once, or approximately 50 MB assuming an individual compressed Artifact Localization is 250 KB. Sending this much data in a single transmission is infeasible over a wireless link. Instead, a maximum of 10 dirty Artifact Localizations are transmitted at once.
+	
+\end{description}
+
+The bandwidth usage with the various techniques described above over an hour long competition run from the Tunnel Circuit for Mk. 1 can be seen in Figure \ref{bandwidth_usage}.
+
+\begin{figure}	
+	
+	\centering		
+	%		\begin{subfigure}{\textwidth}
+	%			\includegraphics[width=\textwidth]{bandwidth_usage_full.png}
+	%			\caption{All bandwidth usage}
+	%			\label{bandwidth_usage_full}
+	%		\end{subfigure}
+	%		\\
+	%		\begin{subfigure}{\textwidth}
+	%			\includegraphics[width=\textwidth]{bandwidth_usage_zoomed.png}
+	%			\caption{Bandwidth usage (zoomed)}
+	%			\label{bandwidth_usage_zoomed}
+	%		\end{subfigure}
+	\includegraphics[width=\textwidth]{bandwidth_usage_full.png}
+	\caption[Artifact transmission bandwidth usage]{The graph shows the bandwidth used by the compressor to try to transmit artifacts over an hour long competition run from Mk. 1 during the Tunnel Circuit. Features are incrementally added, starting with compression and retransmission, and then backoff, debounce, and grouping. None of these configurations have acknowledgements coming back from the base station, which is common when the robot is not within communication range of the base station. The final configuration (CRBDGA) shows the effect of simulating guaranteed acknowledgements.}
+	\label{bandwidth_usage}
+\end{figure}
+
 
 \section{Artifact Uncompressor}
 
