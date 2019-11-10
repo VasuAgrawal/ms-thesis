@@ -394,6 +394,26 @@ The bandwidth usage with the various techniques described above over an hour lon
 
 \section{Artifact Uncompressor}
 
-TODO
+The artifact uncompressor is responsible for receiving and uncompressing messages sent by the artifact compressor nodes on each robot. A single instance of the uncompressor node runs on the base station and services messages sent by all artifact compressor nodes. Upon receipt of a message, the uncompressor will publish an acknowledgement with the transmission timestamp contained inside the message. The acknowledgement is only published once. If the acknowledgement is dropped in transit over the wireless link, the compressor will simply publish the artifact again at a later time. The uncompressor does not manipulate or store the messages it receives in any way - each compressed Artifact Localization received from the compressor node is simply uncompressed and broadcast on the base station for other nodes, such as the GUI, to use.
 
 \section{GUI}
+
+The GUI is used by the human supervisor at the base station to perform a large variety of tasks related to initializing and controlling the fleet of robots. One of these tasks is to validate and, if necessary, refine Artifact Localizations returned from robots in the fleet. Validated Artifact Localizations are reported to DARPA for scoring. An example of the validation GUI, populated with Artifact Localizations, is shown in Figure \ref{gui}. All other tasks performed at the base station are unrelated to the scope of this work.
+
+\begin{figure}
+	\centering
+	\includegraphics[width=\textwidth]{gui_drill_zoom.png}
+	\caption[GUI used for artifact localization validation]{The top left portion of the GUI is used for Artifact Localization verification, and consists of two separate panes. The left side of the image shows a queue for Artifact Localizations which still need to be reviewed by the human supervisor, along with the classification and which robot reported the Artifact Localization and when it was detected relative to the start of the run. The right side of the image shows the images contained in the Artifact Localization report, if any, one at a time. The images can be cycled through using the arrows. The coordinates in the Artifact Localization displayed underneath the images.}
+	\label{gui}
+\end{figure}
+
+Uncompressed Artifact Localizations sent by the artifact uncompressor are received by the GUI and have their coordinates transformed into the DARPA frame using the corresponding robot's calibration. The ID of each Artifact Localization is used to determine whether the Artifact Localization is already being displayed or if a new Artifact Localization has been received. New ones are added to a queue of Artifact Localizations which still need to be inspected by the human supervisor and are highlighted in green. Updates to existing Artifact Localizations either cause them to be removed from the queue, in the case of an invalidation, or simply updated, in which case they will again be highlighted in green. The human supervisor can click on any pending Artifact Localization in the queue, which will render it in white and display the first contained image, if any, and perform one of the following actions:
+
+\begin{enumerate}
+	\item \textbf{Submit} -- After verifying that the images, if any, contain an object, that the bounding box is correct, and that the classification matches the object, the Artifact Localization can be submitted to DARPA. If the artifact is within 5m of DARPA's surveyed coordinates, the displayed score in the GUI will increase.
+	\item \textbf{Refine} -- If the human supervisor has verified that images, bounding box, and classification are correct and submitted the artifact to DARPA but did not receive a score increase, the artifact position can be manually refined. This can be used to correct for map drift or a poor initial calibration between the robot's world frame and the DARPA frame. The Artifact Localization's class can also be updated if necessary.
+	\item \textbf{Clone} -- Any Artifact Localization can be duplicated, with the copy being placed in the queue as a new artifact. This is useful if two artifacts have accidentally been clustered together. The duplicated artifact can be amended manually to match the second of the two artifacts seen in the images.
+	\item \textbf{Delete} -- The human supervisor can choose to delete any artifact. Typically, they will delete false positive Artifact Localizations, duplicates from multiple robots, and updates to artifacts which have already been successfully scored.
+\end{enumerate}
+
+During the Tunnel Circuit competition event, the human supervisor for Team Explorer was able to inspect approximately 200 Artifact Localizations in less than 5 minutes. Many of these Artifact Localizations could be rejected in less than 1 second due to the displayed image being wrong. Valid Artifact Localizations were submitted quickly in the beginning as no duplicates were possible. Towards the bottom of the queue, additional care was taken to ensure duplicates did not get submitted, increasing the time spent per artifact. Cell phone Artifact Localization coordinates were occasionally refined due to the high error of the signal localizer. No other artifact types were refined unless the human supervisor suspected large map drift had occurred. There were no circumstances under which the classification of the artifact needed to be updated manually.
