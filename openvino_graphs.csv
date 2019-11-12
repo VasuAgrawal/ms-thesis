@@ -1,0 +1,16 @@
+Model Checkpoint Name,Batch size,Average Frames per Second
+ssd_mobilenet_v1_0.75_depth_300x300_coco14_sync_2018_07_03,1,62.500
+ssdlite_mobilenet_v2_coco_2018_05_09,1,58.824
+ssd_mobilenet_v1_coco_2018_01_28,1,41.667
+ssd_mobilenet_v1_ppn_shared_box_predictor_300x300_coco14_sync_2018_07_03,1,40.000
+ssd_mobilenet_v2_coco_2018_03_29,1,25.641
+ssd_inception_v2_coco_2018_01_28,1,11.494
+faster_rcnn_inception_v2_coco_2018_01_28,1,2.066
+faster_rcnn_resnet50_lowproposals_coco_2018_01_28,1,1.393
+ssd_mobilenet_v1_fpn_shared_box_predictor_640x640_coco14_sync_2018_07_03,1,0.944
+faster_rcnn_resnet101_lowproposals_coco_2018_01_28,1,0.855
+ssd_resnet50_v1_fpn_shared_box_predictor_640x640_coco14_sync_2018_07_03,1,0.674
+mask_rcnn_inception_v2_coco_2018_01_28,1,0.552
+faster_rcnn_resnet50_coco_2018_01_28,1,0.536
+faster_rcnn_resnet101_coco_2018_01_28,1,0.446
+mask_rcnn_resnet50_atrous_coco_2018_01_28,1,0.063

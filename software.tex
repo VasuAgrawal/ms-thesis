@@ -5,7 +5,7 @@ The artifact detection and localization pipeline is responsible for converting t
 \begin{enumerate}
 	\item Reported coordinate of artifact must be within 5m (Euclidean distance) of DARPA-surveyed coordinate
 	\item Pipeline must run on-board, either on the Xavier (Mk. 0, Mk. 1), or on part of the NUC (drone)
-	\item Artifacts must be transmitted to base station over a lossy wireless link
+	\item Artifacts must be transmitted to base station reliably over a lossy wireless link
 	\item Pipeline should be capable of detecting all 5 types of artifacts (as shown in Figure \ref{tunnel artifacts})
 	\item All artifacts which the robots pass by should be detected
 	\item Pipeline should be identical or nearly identical on all payloads
@@ -63,7 +63,109 @@ One of the assumptions made during the initial design phases of the software pip
 
 \section{Object Detector (RGB)}
 
-\subsection{Network Benchmarks}
+A 2D convolutional neural network based object detector runs on each of the RGB image stream to detect all artifact types except cell phones. To select the network, a variety of network architectures were benchmarked, identifying networks which would be capable of running at camera framerate on the NUC (for 1 RGB image stream) and on the Xavier (for 4 RGB image streams). Pretrained checkpoints for the fastest network types were finetuned using manually collected and annotated data. The best performing networks were selected for use in the pipeline.
+
+The TensorFlow Object Detection API was used for all network training and inference tasks. The API provides checkpoints for a large variety of popular network architectures, and has support from both Nvidia and Intel for optimizing networks trained with the API to run on their respective hardware platforms. The YOLO family of networks was not considered for use in the Artifact Detection and Localization pipeline due to the lack of support for it in the API.
+
+\subsection{Network Benchmarking and Selection}
+
+The TensorFlow Object Detection API was used to evaluate a large number of network architectures and configurations for inference speed on the Nvidia Xavier and Intel NUC. All models available in the model zoo were downloaded, optimized for each hardware platform, and benchmarked for average inference speed. 
+
+\subsubsection{Xavier Benchmarks}
+
+Nvidia provides the TensorRT runtime to accelerate neural network inference on its platforms. Using the TensorRT runtime directly is typically a difficult and involved process. TF-TRT bindings are provided within TensorFlow to simplify the use of TensorRT for certain types of models trained with TensorFlow. Supported subgraphs of the network will be converted into optimized TensorRT engines, while unsupported operations will execute natively in TensorFlow. Support is provided by Nvidia for models trained with the TensorFlow Object Detection API to ensure many model types can be converted using TF-TRT. 
+
+During conversion, all networks were optimized to use 16 bit floating precision, which typically achieves comparable network precision and accuracy as 32 bit precision while allowing for higher throughput. Batch sizes of 1 and 4 were used, representing configurations where images from each camera are processed sequentially, or a batch of images (one from each camera) is processed at once. A minimum segment size of 50 was used. Some networks failed to convert with these parameters and were ignored. Before benchmarking, all CPU and GPU cores on the Xavier were enabled (MAX-N mode) and had their frequency maximized. The fan was set to run at maximum speed to prevent overheating during test runs. 
+
+When benchmarking a network, a set of images (equivalent to the network's batch size) was first run through it to allow TensorFlow to optimize runtime parameters. The same set of images were then run through the network 100 times in a loop, and the inference times for each loop iteration were recorded. No limits were placed on the number of cores, percent of GPU, or percent of system memory available to the neural network. The average of the loop iteration times are presented in Table \ref{trt_graphs} for each network architecture which was successfully converted with TF-TRT. Table \ref{reference_graphs} shows the average loop iteration time for all unoptimized networks as a baseline, and to show performance numbers for networks which were unable to be converted.
+
+% https://tex.stackexchange.com/questions/97505/shrink-table-to-fit-on-a-page-or-keep-it-as-it-is
+% https://tex.stackexchange.com/questions/269545/csvreader-and-respect-all-special-characters-in-the-csv-file	
+
+\begin{table}
+	\centering
+	\begin{adjustbox}{max width=.9\textwidth}
+		\csvreader[
+		respect underscore=true,
+		tabular=|c|c|c|c|,
+		late after line=\\\hline,
+		% This is a terrible hack to get the multiline support I want.
+		table head=\hline & \textbf{Batch} & \textbf{Average Batches} & \textbf{Average Frames} \\
+		\textbf{Model Checkpoint Name} & \textbf{Size} & \textbf{Per Second} & \textbf{Per Second}\\\hline,
+		% table head=\hline \textbf{Model Checkpoint Name} & \textbf{Batch Size} & \textbf{Average Batches per Second} & \textbf{Average Frames per Second}\\\hline,
+		]{trt_graphs.csv}{}{\csvlinetotablerow}
+	\end{adjustbox}
+	\caption{Optimized TF-TRT network inference benchmarks on Xavier}
+	\label{trt_graphs}
+\end{table}
+
+\begin{table}
+	\centering
+	\begin{adjustbox}{max width=.9\textwidth}
+		\csvreader[
+			respect underscore=true,
+			tabular=|c|c|c|c|,
+			late after line=\\\hline,
+			% This is a terrible hack to get the multiline support I want.
+			table head=\hline & \textbf{Batch} & \textbf{Average Batches} & \textbf{Average Frames} \\
+						\textbf{Model Checkpoint Name} & \textbf{Size} & \textbf{Per Second} & \textbf{Per Second}\\\hline,
+			% table head=\hline \textbf{Model Checkpoint Name} & \textbf{Batch Size} & \textbf{Average Batches per Second} & \textbf{Average Frames per Second}\\\hline,
+		]{reference_graphs.csv}{}{\csvlinetotablerow}
+	\end{adjustbox}
+	\caption{Reference network inference benchmarks on Xavier}
+	\label{reference_graphs}
+\end{table}
+
+The values reported in Table \ref{trt_graphs} were gathered after optimizing and benchmarking each network once. Repeated benchmarking attempts resulted in very similar average frames per second values. However, repeatedly rerunning the optimization process with TF-TRT and then benchmarking each network resulted in some deviation from the observed average frames per second values, up to approximately 25\% from those reported in Table \ref{trt_graphs}. Thus, the average frames per second values reported in Table \ref{trt_graphs} are not necessarily the maximum possible framerates under the optimization parameters, but we believe they are sufficiently close to inform network selection.
+
+\subsubsection{NUC Benchmarks}
+
+Intel provides the OpenVINO framework which serves a similar purpose as TensorRT on Nvidia's platforms. While no dedicated integration with TensorFlow is available for OpenVINO, specific examples are provided by Intel on optimizing networks trained with the TensorFlow Object Detection API with the OpenVINO framework. Using the available examples, most models based on SSD, FasterRCNN, and MaskRCNN were able to be converted into the intermediate representation used by OpenVINO. 32 bit floating point weights were used.
+
+The models were benchmarked using a nearly identical process to the Xavier benchmarking. OpenVINO was only allowed to use one CPU core during benchmarking, representing a realistic upper bound on the compute available for network inference when other processes are running on the NUC as well. CPU frequencies were governed automatically. GPU support was not enabled for OpenVINO. Benchmarking results from successfully converted models are given in Table \ref{openvino_graphs}.
+
+\begin{table}
+	\centering
+	\begin{adjustbox}{max width=.9\textwidth}
+		\csvreader[
+		respect underscore=true,
+		tabular=|c|c|c|,
+		late after line=\\\hline,
+		% This is a terrible hack to get the multiline support I want.
+		table head=\hline & \textbf{Batch} & \textbf{Average Frames} \\
+		\textbf{Model Checkpoint Name} & \textbf{Size} & \textbf{Per Second}\\\hline,
+		]{openvino_graphs.csv}{}{\csvlinetotablerow}
+	\end{adjustbox}
+	\caption{OpenVINO optimized network benchmarks on NUC (1 core)}
+	\label{openvino_graphs}
+\end{table}
+
+\subsubsection{Network Selection}
+
+The primary criteria for selecting a network architecture was the throughput. The relatively low framerate of the RGB cameras (15 Hz on Mk. 0) often causes motion blur, which negatively impacts detection performance. By ensuring that the selected network would be able to run on each frame, we would increase the probability of detecting objects. The ssd\_mobilenet\_v1\_coco\_2018\_01\_28 architecture and checkpoint was selected as the base for all networks to run on the Xavier and NUC due to it offering the highest throughput on the Xavier (with a batch size of 4) and offering sufficiently fast throughput (>15 Hz) on the NUC.
+
+Table \ref{trt_graphs} only gives benchmarks up to a batch size of 4. To investigate if additional throughput gains were possible for the selected network architecture, we benchmarked the network with larger batch sizes as well, as shown in Table \ref{batch_size_graphs}. Batch sizes larger than 4 would require sending more than one image per stream through the network at once. Table \ref{batch_size_graphs} indicates that this would increase throughput slightly, but it was decided that the added latency and complexity of batching multiple images per stream did not outweigh the small marginal increase in throughput as compared to using a single image per stream (with a batch size of 4).
+
+\begin{table}
+	\centering
+	\begin{adjustbox}{max width=.9\textwidth}
+		\csvreader[
+		respect underscore=true,
+		tabular=|c|c|c|c|c|,
+		late after line=\\\hline,
+		% This is a terrible hack to get the multiline support I want.
+		table head=\hline & \textbf{Batch} & \textbf{Average Batches} & \textbf{Average Frames} & \textbf{Relative}\\
+		\textbf{Model Checkpoint Name} & \textbf{Size} & \textbf{Per Second} & \textbf{Per Second} & \textbf{Speedup}\\\hline,
+		% table head=\hline \textbf{Model Checkpoint Name} & \textbf{Batch Size} & \textbf{Average Batches per Second} & \textbf{Average Frames per Second}\\\hline,
+		]{batch_size_graphs.csv}{}{\csvlinetotablerow}
+	\end{adjustbox}
+	\caption{Reference network inference benchmarks on Xavier}
+	\label{batch_size_graphs}
+\end{table}
+
+
+
+
 \subsection{Data Collection and Labeling}
 \subsection{Training}
 \subsection{Evaluation}

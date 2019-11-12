@@ -1,0 +1,5 @@
+Path to model,Batch size,average batches / second,Average frame rate,relative speed
+ssd_mobilenet_v1_coco_2018_01_28,16,5.780,92.486,1.942
+ssd_mobilenet_v1_coco_2018_01_28,8,10.989,87.912,1.846
+ssd_mobilenet_v1_coco_2018_01_28,4,20.408,81.633,1.714
+ssd_mobilenet_v1_coco_2018_01_28,1,47.619,47.619,1.000
