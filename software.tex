@@ -163,10 +163,83 @@ Table \ref{trt_graphs} only gives benchmarks up to a batch size of 4. To investi
 	\label{batch_size_graphs}
 \end{table}
 
-
-
-
 \subsection{Data Collection and Labeling}
+
+To finetune the selected checkpoint for object detection in the Tunnel Circuit, a large dataset of images and bounding boxes was collected and manually annotated. The dataset contains images sampled from videos of all 5 categories of objects captured from handheld devices, the ground robots, and the drone, in a variety of environments and lighting conditions. Images were labeled using a combination of custom semi-automated and manual tooling.
+
+\subsubsection{Data Collection}
+
+The dataset used to train the network used during the Tunnel Circuit was trained on data collected from the environments listed in Table \ref{environment_descriptions}. A representative image for each environment can be seen in Figure \ref{environments}. Data was collected in each environment using either a custom handheld setup with a RealSense, thermal camera, and LEDs, or directly from the payloads on each robot. When collecting video of each artifact, only the exact model of artifact specified by DARPA was used as no generalization across different models of artifact was required for the Tunnel Circuit.
+
+\begin{table}[]
+	\centering
+	\resizebox{\textwidth}{!}{%
+		\begin{tabular}{|l|l|}
+			\hline
+			\textbf{Environment Name} & \textbf{Environment Description}                                                   \\ \hline
+			Gates Hallway             & The hallway outside Team Explorer's workspace at CMU in the Gates building         \\ \hline
+			Gates Garage              & The parking complex attached to the Gates building (data collected at night)       \\ \hline
+			Catacombs                 & Dusty underground storage area at CMU                                              \\ \hline
+			Tour Ed Mine              & An old coal mine in Tarentum, PA where the majority of field testing was performed \\ \hline
+			STIX Airbnb               & Trail outside the Airbnb Team Explorer stayed at in Colorado during the STIX event \\ \hline
+			STIX Mine                 & The Edgar Experimental Mine where DARPA hosted the STIX event                      \\ \hline
+		\end{tabular}%
+	}
+	\caption{List of environments where data was collected for the Tunnel Circuit dataset}
+	\label{environment_descriptions}
+\end{table}
+
+\begin{figure}
+	\centering
+	\begin{subfigure}{0.3\textwidth}
+		\includegraphics[width=\textwidth]{environments/hallway.png}
+		\caption{Gates Hallway}
+		\label{environment_hallway}
+	\end{subfigure}		
+	\hfill
+	\begin{subfigure}{0.3\textwidth}
+		\includegraphics[width=\textwidth]{environments/gates.png}
+		\caption{Gates Garage}
+		\label{environment_gates}		
+	\end{subfigure}
+	\hfill
+	\begin{subfigure}{0.3\textwidth}
+		\includegraphics[width=\textwidth]{environments/catacombs.png}
+		\caption{Catacombs}
+		\label{environment_catacombs}
+	\end{subfigure}
+	\\
+	\begin{subfigure}{0.3\textwidth}
+		\includegraphics[width=\textwidth]{environments/tour_ed.png}
+		\caption{Tour Ed Mine}
+		\label{environment_tour_ed}
+	\end{subfigure}		
+	\hfill
+	\begin{subfigure}{0.3\textwidth}
+		\includegraphics[width=\textwidth]{environments/colorado.png}
+		\caption{STIX Airbnb}
+		\label{environment_colorado}		
+	\end{subfigure}
+	\hfill
+	\begin{subfigure}{0.3\textwidth}
+		\includegraphics[width=\textwidth]{environments/stix.png}
+		\caption{STIX Mine}
+		\label{environment_stix}
+	\end{subfigure}	
+	\caption[Representative dataset collection environment images]{A representative image for each environment in the Tunnel Circuit dataset is shown in the Figure. All images except Figure \ref{environment_catacombs} were captured from payloads. Figure \ref{environment_catacombs} was captured with the handheld setup.}
+	\label{environments}
+\end{figure}
+
+Handheld data was collected by placing an artifact in a variety of places and poses around the environment and recording short video clips while moving the setup around. For each video clip, the cameras started recording when very close to the artifacts, and then moved backwards. The cameras were also moved around to capture a variety of viewpoints while ensuring that the artifact always stayed in frame. Video clips were typically less than 15 seconds long, and typically only had a single artifact visible at a time. A small number of video clips were gathered with multiple artifacts in close proximity.
+
+Video from the payloads was collected by recording video feeds from all cameras on the robot during both autonomous exploration and teleoperation in the test environments. Teleoperation ensured that all artifacts in the environment would be seen by the robot at a slow and smooth pace, while autonomous exploration generated data with realistic issues, such as motion blur and rolling shutter effects in a number of frames. Artifacts would be spread through the environment prior to the run and were not moved while data was being gathered. Payload videos typically exceeded 20 minutes each and only had artifacts visible in a small number of frames, but served as valuable source of realistic data and negative examples for the dataset.
+
+
+
+\subsubsection{Data Labeling}
+
+\subsubsection{Dataset Statistics}
+
 \subsection{Training}
 \subsection{Evaluation}
 
