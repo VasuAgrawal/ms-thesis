@@ -234,12 +234,80 @@ Handheld data was collected by placing an artifact in a variety of places and po
 
 Video from the payloads was collected by recording video feeds from all cameras on the robot during both autonomous exploration and teleoperation in the test environments. Teleoperation ensured that all artifacts in the environment would be seen by the robot at a slow and smooth pace, while autonomous exploration generated data with realistic issues, such as motion blur and rolling shutter effects in a number of frames. Artifacts would be spread through the environment prior to the run and were not moved while data was being gathered. Payload videos typically exceeded 20 minutes each and only had artifacts visible in a small number of frames, but served as valuable source of realistic data and negative examples for the dataset.
 
-
-
 \subsubsection{Data Labeling}
 
-\subsubsection{Dataset Statistics}
+The video clips gathered from the handheld devices were collected in a way to be amenable to a semi-automatic data labeling based on image tracking. Using a custom labeling program, a human labeler draws and labels bounding boxes around each artifact. An image tracker is initialized for each individual bounding box, and is used to update the bounding box for each artifact in every frame. The human labeler presses a key to step through each frame and watches the automatically updated bounding boxes to ensure they are still sufficiently accurate. If the tracker fails for any reason, the labeler adjusts the bounding box to tightly bound the artifact again, and the tracker is reinitialized with the new box. The label assigned to the box is used throughout the entire video clip. Figure \ref{semi_automatic_labeling} shows frames labeled with this process sampled evenly from a 30 second video clip.
 
+\begin{figure}
+	\centering
+	\begin{subfigure}{0.3\textwidth}
+		\includegraphics[width=\textwidth]{tracking/rect_00000.png}
+	\end{subfigure}		
+	\hfill
+	\begin{subfigure}{0.3\textwidth}
+		\includegraphics[width=\textwidth]{tracking/rect_00180.png}
+	\end{subfigure}
+	\hfill
+	\begin{subfigure}{0.3\textwidth}
+		\includegraphics[width=\textwidth]{tracking/rect_00360.png}
+	\end{subfigure}
+	\\
+	\begin{subfigure}{0.3\textwidth}
+		\includegraphics[width=\textwidth]{tracking/rect_00540.png}
+	\end{subfigure}		
+	\hfill
+	\begin{subfigure}{0.3\textwidth}
+		\includegraphics[width=\textwidth]{tracking/rect_00720.png}
+	\end{subfigure}
+	\hfill
+	\begin{subfigure}{0.3\textwidth}
+		\includegraphics[width=\textwidth]{tracking/rect_00900.png}
+	\end{subfigure}	
+	\caption[Example video labeled with semi-automatic pipeline]{Example video labeled with semi-automatic labeling pipeline. The number inside the bounding box indicates the ID the artifact in the image (0-indexed), and the letter is a 1 letter identifier for the classification (d for drill, f for fire extinguisher). Digital zoom is recommended.}
+	\label{semi_automatic_labeling}
+\end{figure}
+
+A few parameters were added to the labeling program to trade off between labeling accuracy and speed. The tracker performance could be modified with a flag to change the scale of the image used for tracking. Downsampling the image resulted in a faster tracker framerate, but at occasionally reduced quality. In addition, the tracker type could be changed for each video clip. We determined that, of the trackers we considered (those available in the OpenCV contrib library), the CSRT tracker offered the best tracking accuracy while maintaining a reasonable framerate (typically around 30 fps on a laptop) at native resolution, and thus it was used for all labeled video clips. Only every 5th labeled video frame was added to the dataset to reduce redundancy between samples.
+
+The semi-automated labeling pipeline requires the handheld video to be recorded in a specific way to ensure a good tracker initialization. Videos recorded from the payloads on each robot do not have this property and must be labeled manually. To speed up the manual labeling process, a second custom labeling program was developed. Labelers watch the video at an accelerated speed until they see an artifact. They then step backwards in the video until the artifact first entered the frame, and begin labeling every 5th frame. After drawing a box around an artifact (two clicks), the class can be assigned by pressing a single key (unique per class) on the keyboard. The last assigned class is preserved between frames to simplify the common case of only a single artifact being visible in frame. A tracker was not used to propagate labels between frames due to time constraints, but was the labelers' most requested feature. All labeled images, from both the semi-automated and manual labeling programs, were validated by two additional labelers to ensure consistent, high quality labels.
+
+During the labeling process, we discovered the cell phone artifact was particularly difficult to label due to its small size, dark color which did not offer significant contrast to the environment, and large appearance variation due to the video being played on it. We speculated that a neural network would have similar issues when attempting to detect the cell phone, and thus did not label a significant number of cell phones in RGB images during the labeling process.
+
+\subsubsection{Dataset Generation and Statistics}
+
+Not all labeled images were used to train networks for the Tunnel Circuit. The sparse distribution of artifacts in the environment means that the video collected from the robots' payloads will have a large percentage of frames without artifacts, typically larger than 90\% per video. Using such a large number of negative examples negatively impacts training performance and thus many must be filtered out. The train and eval datasets were generated such that there could be no more than a set ratio of negative examples to overall examples. Additionally, since all training images were sampled from videos, randomly distributing the videos into a train and eval set would not be sufficient as videos are highly correlated and as a result both sets would be very similar. Instead, entire video clips were manually assigned to be a part of either the train or eval datasets. All images were preserved at their native resolution (640 x 360) and losslessly encoded when added to the dataset. Any labels for cell phone artifacts were discarded. Statistics on the RGB train and eval datasets are presented in Table \ref{} respectively.
+
+% Tested on 2019-06-07 in tunnel_circuit_dataset by running find . -type f -iname "*.txt" | wc -l and  find . -empty -type f -iname "*.txt" | wc -l
+
+\begin{table}
+	\centering
+	\begin{adjustbox}{max width=.9\textwidth}
+		\csvreader[
+		respect underscore=true,
+		tabular=|l|c|c|,
+		late after line=\\\hline,
+		% This is a terrible hack to get the multiline support I want.
+		table head=\hline \textbf{Statistic} & \textbf{Train} & \textbf{Eval}\\\hline,
+		]{rgb_statistics.csv}{}{\csvlinetotablerow}
+	\end{adjustbox}
+	\caption{Dataset statistics for Tunnel Circuit RGB Dataset}
+	\label{rgb_statistics}
+\end{table}
+
+Dataset:
+* number of images
+* number of positive examples (images with 1+ artifacts)
+* number of negative examples (images with 0 artifacts)
+* number of total images (to save people having to do math)
+* number of images with 1 artifact
+* number of images with 2 artifacts
+* number of images with 3 artifacts
+* number of images with 4 artifacts
+* number of images with each type of artifact
+* number of examples of each type of artifact (can have multiple per image)
+
+
+ 
 \subsection{Training}
 \subsection{Evaluation}
 

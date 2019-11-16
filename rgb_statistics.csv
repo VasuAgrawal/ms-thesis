@@ -1,0 +1,16 @@
+,Train,Eval
+Examples with 0 bounding boxes,1408,71
+Examples with 1 bounding boxes,7595,382
+Examples with 2 bounding boxes,240,13
+Examples with 3 bounding boxes,3,0
+,,
+Positive examples (1+ bbox),7838,395
+Negative examples (0 bboxes),1408,71
+Overall examples (0+ bboxes),9246,466
+Ratio of positive examples to total,0.848,0.848
+Ratio of negative examples to total,0.152,0.152
+,,
+Backpack bounding boxes,1634,82
+Drill bounding boxes,1626,88
+Fire extinguisher bounding boxes,1978,100
+Survivor bounding boxes,2846,138
