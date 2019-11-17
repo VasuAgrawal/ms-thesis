@@ -1,0 +1,19 @@
+,Train,Eval
+Examples with 0 bounding boxes,0,0
+Examples with 1 bounding boxes,2031,391
+Examples with 2 bounding boxes,1,0
+,,
+Positive examples (1+ bbox),2032,391
+Negative examples (0 bboxes),0,0
+Overall examples (0+ bboxes),2032,391
+Ratio of positive examples to total,1,1
+Ratio of negative examples to total,0,0
+,,
+Survivor bounding boxes,2033,391
+,,
+Small bounding boxes,1,0
+Medium bounding boxes,160,59
+Large bounding boxes,1872,332
+Ratio of small bboxes to total,0,0
+Ratio of medium bboxes to total,0.079,0.151
+Ratio of large bboxes to total,0.921,0.849

@@ -14,3 +14,10 @@ Backpack bounding boxes,1634,82
 Drill bounding boxes,1626,88
 Fire extinguisher bounding boxes,1978,100
 Survivor bounding boxes,2846,138
+,,
+Small bounding boxes,1970,106
+Medium bounding boxes,3779,186
+Large bounding boxes,2335,116
+Ratio of small bboxes to total,0.244,0.26
+Ratio of medium bboxes to total,0.467,0.456
+Ratio of large bboxes to total,0.289,0.284

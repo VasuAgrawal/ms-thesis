@@ -275,7 +275,7 @@ During the labeling process, we discovered the cell phone artifact was particula
 
 \subsubsection{Dataset Generation and Statistics}
 
-Not all labeled images were used to train networks for the Tunnel Circuit. The sparse distribution of artifacts in the environment means that the video collected from the robots' payloads will have a large percentage of frames without artifacts, typically larger than 90\% per video. Using such a large number of negative examples negatively impacts training performance and thus many must be filtered out. The train and eval datasets were generated such that there could be no more than a set ratio of negative examples to overall examples. Additionally, since all training images were sampled from videos, randomly distributing the videos into a train and eval set would not be sufficient as videos are highly correlated and as a result both sets would be very similar. Instead, entire video clips were manually assigned to be a part of either the train or eval datasets. All images were preserved at their native resolution (640 x 360) and losslessly encoded when added to the dataset. Any labels for cell phone artifacts were discarded. Statistics on the RGB train and eval datasets are presented in Table \ref{} respectively.
+Not all labeled images were used to train networks for the Tunnel Circuit. The sparse distribution of artifacts in the environment means that the video collected from the robots' payloads will have a large percentage of frames without artifacts, typically larger than 90\% per video. Using such a large number of negative examples negatively impacts training performance and thus many must be filtered out. The train and eval datasets were generated such that there could be no more than a set ratio of negative examples to overall examples. Additionally, since all training images were sampled from videos, randomly distributing the videos into a train and eval set would not be sufficient as videos are highly correlated and as a result both sets would be very similar. Instead, entire video clips were manually assigned to be a part of either the train or eval datasets. All images were preserved at their native resolution (640 x 360) and losslessly encoded when added to the dataset. Any labels for cell phone artifacts were discarded. Statistics on the RGB train and eval datasets are presented in Table \ref{rgb_statistics}.
 
 % Tested on 2019-06-07 in tunnel_circuit_dataset by running find . -type f -iname "*.txt" | wc -l and  find . -empty -type f -iname "*.txt" | wc -l
 
@@ -293,26 +293,59 @@ Not all labeled images were used to train networks for the Tunnel Circuit. The s
 	\caption{Dataset statistics for Tunnel Circuit RGB Dataset}
 	\label{rgb_statistics}
 \end{table}
-
-Dataset:
-* number of images
-* number of positive examples (images with 1+ artifacts)
-* number of negative examples (images with 0 artifacts)
-* number of total images (to save people having to do math)
-* number of images with 1 artifact
-* number of images with 2 artifacts
-* number of images with 3 artifacts
-* number of images with 4 artifacts
-* number of images with each type of artifact
-* number of examples of each type of artifact (can have multiple per image)
-
-
  
 \subsection{Training}
+
+All neural network training was performed using the TensorFlow Object Detection API. The benchmarks in Table \ref{trt_graphs} and Table \ref{openvino_graphs} indicated that the MobileNet + SSD family of networks would offer the highest framerates, so a number of configurations using MobileNet were trained. All network configuration files were derived from checkpoint files available in the TensorFlow Object Detection API, with all values except those mentioned below left as provided. Each configuration used a batch size of 12, an input image size of 640 x 360, and the random horizontal flip, random brightness adjustment, random contrast adjustment, and ssd random crop data augmentations provided by the API with the default parameters. The RMSProp optimizer was used to train all networks, with a decay of 0.9, a momentum value of 0.9, an epsilon value of 0.9, and an exponentially decaying learning rate with an initial learning rate of 0.004, 500000 decay steps, and a decay factor of 0.95. A score threshold of 0.4 was used for non maximum suppression.
+
+Networks using either MobileNet V1 or Mobilenet V2 as a feature extractor, SSD or SSD Lite as an object detection head, and focal loss or hard example mining as a loss function were trained, resulting in 8 separate networks. Each network was in initialized using checkpoints provided by the TensorFlow Object Detection API, which are pretrained for classification on ImageNet and then trained for object detection on COCO. All configurations were trained for a week with a single GPU for each network on an AWS p3.16xlarge instance. As no limit was placed on the number of steps for each network, checkpoints were kept every 4 hours of training to allow a checkpoint to be selected during evaluation from any point in the training.
+
 \subsection{Evaluation}
 
+COCO evaluation metrics were used to quantify the performance of each network. The overall loss plot for each network (in Figure \ref{rgb_loss}) indicates that each network reached convergence by approximately 300k steps. The COCO metrics for each network configuration at 300k steps are given in Table \ref{rgb_training}. The table indicates that while the SSD Lite MNV2 Focal configuration had the best overall performance, all of the networks performed comparably in the majority of the evaluation metrics. As inference speed was a priority, using guidance from the previous benchmarking results we decided to use the SSD MNV1 Hard configuration for the Tunnel Circuit.
+
+\begin{figure}	
+	\centering
+	\includegraphics[width=0.5\textwidth]{rgb_loss.png}
+	\caption[RGB network loss values]{Loss values for all 8 configurations, with a smoothing of 0.95 applied in TensorBoard. X axis indicates number of steps. Y axis indicates overall loss value.}
+	\label{rgb_loss}
+\end{figure}
+
+\begin{table}
+	\centering
+	\begin{adjustbox}{max width=.95\textwidth}
+		\csvreader[
+		respect underscore=true,
+		tabular=|l|c|c|c|c|c|c|c|c|c|c|c|c|,
+		late after line=\\\hline,
+		% This is a terrible hack to get the multiline support I want.
+		table head=\hline \textbf{Configuration} & \textbf{mAP} & \textbf{mAP$_{large}$} & \textbf{mAP$_{med}$} & \textbf{mAP$_{small}$} & \textbf{mAP$_{0.5 IOU}$} & \textbf{mAP$_{0.75 IOU}$} & \textbf{AR$_{1}$} & \textbf{AR$_{10}$} & \textbf{AR$_{100}$} & \textbf{AR$_{large}$} & \textbf{AR$_{med}$} & \textbf{AR$_{small}$} \\\hline,
+		]{rgb_training.csv}{}{\csvlinetotablerow}
+	\end{adjustbox}
+	\caption[COCO evaluation metrics for RGB networks at 300k steps]{COCO evaluation metrics for RGB networks at 300k steps. MNV1 and MNV2 configurations use MobileNet v1 and v2 feature extractors respectively.}
+	\label{rgb_training}
+\end{table}
+
 \section{Object Detector (Thermal)}
-TODO
+
+The development of the thermal object detector closely mirrored that of the RGB object detector. The same data collection and labeling pipeline was used to label thermal images. Thermal images proved more difficult to label, but labelers found that viewing RGB images of the scene alongside the thermal images increased labeling speed. Backpacks, drills, and fire extinguishers were discovered to have minimal thermal signatures and were excluded from labeling. Cell phones were visible in thermal images but proved too small to label accurately and were thus also excluded from labeling. Only the survivor artifact was labeled. All data was kept at the native camera resolution of 640 x 512. The dataset was generated in a similar fashion to the RGB dataset, though no negative examples were used. Statistics for it are given in Table \ref{thermal_statistics}.
+
+\begin{table}
+	\centering
+	\begin{adjustbox}{max width=.9\textwidth}
+		\csvreader[
+		respect underscore=true,
+		tabular=|l|c|c|,
+		late after line=\\\hline,
+		% This is a terrible hack to get the multiline support I want.
+		table head=\hline \textbf{Statistic} & \textbf{Train} & \textbf{Eval}\\\hline,
+		]{thermal_statistics.csv}{}{\csvlinetotablerow}
+	\end{adjustbox}
+	\caption{Dataset statistics for Tunnel Circuit Thermal Dataset}
+	\label{thermal_statistics}
+\end{table}
+
+Thermal object detection network training was performed after the RGB network had been trained. Using the insight from training the various RGB network configurations, we decided to only train a single configuration of the thermal network, identical to that of the selected RGB network (SSD MNV1 Hard). All configuration parameters were reused, with the only difference being the dataset.
 
 \section{LIDAR Renderer}
 
