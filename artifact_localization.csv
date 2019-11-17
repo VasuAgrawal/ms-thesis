@@ -1,0 +1,10 @@
+datatype,name,explanation
+Time,stamp,When the artifact was first discovered
+bool,valid,Whether the artifact is valid (used for invalidations)
+float,x,Robot /map frame x coordinate of localization point
+float,y,Robot /map frame y coordinate of localization point
+float,z,Robot /map frame z coordinate of localization point
+float,confidence,"Classification confidence, 0 to 1"
+uint,class_id,Machine readable class id
+uint,report_id,"Unique ID for this artifact, consistent across time"
+Image[],images,"Images to support the detection, if any"
