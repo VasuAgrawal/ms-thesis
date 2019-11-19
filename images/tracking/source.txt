@@ -1,0 +1,1 @@
+/home/vasu/Documents/projects/SubT/datasets/stix/videos_to_label/tracked/VID_20190215_124343_TrackerCSRT_1.000000
