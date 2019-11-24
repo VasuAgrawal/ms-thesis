@@ -1,97 +1,94 @@
 \chapter{Introduction}
 
-Insert something about the first responders here, similar to the abstract. Say how the first responders need better tooling for situational awareness, and how the tooling they use currently is inadequate. This can probably be pulled directly from the video here, and cited accordingly, or from some of the other DARPA documentation. Shame the closing ceremony wasn't livestreamed ...
+Rapid situational awareness is the key to enabling a successful response from first responders during an emergency. Incident command uses all information available to them to make decisions and coordinate the first responders. First responders are often sent into the incident scene to gather information, but the nature of emergencies makes this process dangerous and can risk additional lives. Subterranean environments pose a number of additional hazards and challenges, such as outdated maps, dangerous terrain, and low visiblity, making them particularly difficult to send humans into safely. For example, emergency personnel cannot safely explore beyond fires in coal mines, and are thus unable to determine the number of people or quality of terrain that may be behind them. Autonomous systems have the potential to significantly improve the quality and timeliness of the situational awareness gained in challenging subterranean environments, and by doing so can reduce risk to human lives.
 
-actually it was: https://www.youtube.com/watch?v=rMW-wZTecqE
+% Livestream: https://www.youtube.com/watch?v=rMW-wZTecqE (2:47:00 mark or so for the MSHA presentation)
+% NYC fire chief: https://www.youtube.com/watch?v=4I4J67jxODE
 
-https://www.youtube.com/watch?v=4I4J67jxODE
+\section{The DARPA Subterranean Challenge (SubT)}
 
-https://www.darpa.mil/program/darpa-subterranean-challenge
+The DARPA Subterranean Challenge was issue to spur the development of new technologies to explore these complex underground environments. Teams are challenged to propose new and innovative solutions for the unique perception, mobility, communication, and autonomy problems present in these environments. Teams compete in a series of 3 separate circuit events, each in a different type of subterranean environment, listed in Figure \ref{darpa_environments}. The highest performing teams will be invited to a final event which incorporates elements of each type of environment. In each event, teams are tasked with deploying systems which rapidly provide situational awareness, in the form of map data and locations of predetermined artifacts placed by DARPA.
 
-"New York city with the fire department, we have many challenges with the underground subterranean environment, whether it be a train fire, a terrorist incident, or just a derailed train, we don't get that situational awareness of what's going down in the tunnel, what's happening, until we get some firefighters down there"
+\begin{figure}	
+	\centering
+	\includegraphics[width=\textwidth]{darpa_environments.jpg}
+	\caption[DARPA Subterranean Challenge environments]{The Tunnel Circuit focuses on human made tunnel systems. The Urban Circuit focuses on urban environments such as mass transit and municipal infrastructure. The Cave Circuit focuses on naturally occurring cave systems.}
+	\label{darpa_environments}
+\end{figure}
 
-insert some brilliant transition into talking about how there's an opportunity to address theses challenges, and the rest of the work was done in the context of solving the situational awareness problem for the subt challenge
+During each circuit event, teams have 60 minutes to deploy their systems in the environment. The deployment may consist of as many robots as the teams desire, but must be operated by a single human supervisor at the team's base station. Not all areas of the environment will be traversable for all types of robots, so teams are encouraged to develop systems with a variety of mobility capabilities. Communication with and coordination of each robot in the fleet is an additional challenge as no communication infrastructure is provided by DARPA. Autonomous exploration capability is advised to reduce operator load and eliminate a need for constant connectivity. The perception systems used to drive the autonomy should be able to handle a variety of challenging conditions, such as low visibility and variable lighting. Teams may be permitted multiple runs per event.
 
-\section{The DARPA Subterranean (SubT) Challenge}
+Before a team's run, DARPA places a predetermined and disclosed number of artifacts in the environment. The locations of specific points on each of these artifacts, referenced to a DARPA-defined frame, are surveyed and treated as ground truth. The location of each artifact and number of each artifact type is unknown to teams. Scoring for each competition event is based entirely on the number of artifacts which are correctly reported to DARPA within the 60 minute period. Teams must report the artifact's category and must report coordinates which are within 5m Euclidean distance of the ground truth for an artifact report to be considered correct. Teams may submit twice the number of artifact reports as there are artifacts in the environment. Artifact reports may be generated in whichever manner a team deems appropriate, such as randomly, by the human supervisor, or fully autonomously by the deployed system. Ties between multiple teams are broken by a number of factors, including the times artifacts were submitted, and the furthest artifacts detected.
 
-insert some boilerplate about what the darpa subt challenge is. This is probably a good time to include a few screenshots from their videos which show the various environments. Briefly mention the challenges that need to be addressed. Perception, mobility, communications, autonomy, whatever else.
+%https://subtchallenge.com/resources/SubT\_Challenge\_Tunnel\_Rules.pdf
+%https://subtchallenge.com/resources/SubT\_Tunnel\_Artifacts\_Specification.pdf
 
-Also, mention that this is split into a few rounds, and that here we're only focusing on the Tunnel circuit for both development and evaluation, since we don't really know what's coming next. That also lets me be more specific about what artifacts are being used, how much time we have, etc.
+\section{Tunnel Circuit Specifics}
 
-Now, talk about the specifics of the perception challenge. Here's some text from the competition rules document:
+This work focuses specifically on artifact detection and localization in the context of the Tunnel Circuit. The Tunnel Circuit event took place between at the National Institute for Occupational Safety and Health Mining (NIOSH) site in Pittsburgh, PA, between August 15 and August 22 2019. DARPA divided the former coal mine into two separate courses, starting at the mine's two separate portals, Safety Research and Experimental. A map of the Safety Research course is shown in Figure \ref{tunnel_circuit_day_2}. Each team was allowed 2 runs in each course. The team's final score is a sum of the highest score from each course.
 
-https://subtchallenge.com/resources/SubT\_Challenge\_Tunnel\_Rules.pdf
+20 artifacts were deployed by DARPA in each course. The placement and distribution of artifacts varied between each course and each run, as indicated in Table \ref{final_scores}. Five specific categories of artifacts were used at the Tunnel Circuit, shown in Figure \ref{tunnel artifacts} and described below. Each category of artifact is specified to only use the single model of object shown the figure.
 
-Also here's the artifacts specification which we should probably mention here:
+\subsubsection{Backpack}
 
-https://subtchallenge.com/resources/SubT\_Tunnel\_Artifacts\_Specification.pdf
+The backpack artifact represents a typical adult-sized bag for carrying items. The backpack may be found on the ground, on a wall, or resting on a work surface, such as a table. The backpack contains a sandbag to help keep it in place during the competition. The front backpack is facing outward or upward depending on the initial placement.
 
-The main scoring objective is the need to search for, detect, and provide spatially referenced
-locations of artifacts relevant to each of the three subdomains. These artifacts could vary in their
-size, quantity, and detection signatures (e.g., visual, thermal, chemical). DARPA will announce
-the final artifacts in advance of each Circuit Event as part of the finalized event rules
-(approximately 90 days before each event) so teams will know what to look for, but the locations
-and distribution of the artifacts within the course will not be known. It is expected that the number
-of artifacts will be in the range of 10-30 and multiple copies of each artifact type are possible. The
-total number of artifacts, but not the number of each type, will be disclosed to the competitors.
-The perception problems of interest in the SubT Challenge are focused on the difficulties of
-sensing in low-/no-light, obscured, and/or scattering environments. The detection and/or
-recognition tasks may benefit from multimodal sensing approaches. Various sensor modalities
-and combinations are allowed, including but not limited to: visual, light detection and ranging
-(LIDAR), thermal, acoustic, radio frequency (RF), and multi-gas sensors. For example, the
-detection of a survivor could potentially be made using a combination of visual, thermal, and/or
-auditory cues.
+\subsubsection{Cell Phone}
 
-Specifically:
+The cell phone artifact represents a radio used for communication, as well as other typical handheld devices. The cell phone is playing an unspecified full-screen video. Audio is playing from the phone at maximum volume. A 2.4 GHz access point is created by each cell artifact with an SSID of the form "PhoneArtifact\#\#", where "\#\#" is a unique two digit number. The cell phone's Bluetooth radio is on and discoverable.
 
-\textbf{Goal:} Report the locations and classes of 20 unique artifacts to DARPA within the competition period (1 hour) within an absolute Euclidean error of 5m.
+\subsubsection{Drill}
 
-\textbf{Scoring:} The score is the number of artifacts correctly classified and localized to within 5m of the actual surveyed location by DARPA.
+The drill artifact represents a typical handheld tool. The drill has a Philips head driver in its chuck. The artifact may be found on the ground or on work tables. The orientation of the drill is not specified. The drill is not powered during scored runs.
 
-\textbf{Interesting subt specifics (which make it a somewhat different CV problem):}
-\begin{itemize}
-	\item There are a fixed number of object categories, but the objects within each category are also fixed. That is, there's only 1 survivor, 1 fire extinguisher, etc. List each of the 5 artifacts here.
-	\item You're allowed to have a human operator interface with the system. This gives the possibility of using the human in the artifact localization system.
-	\item We get (an average of) 2 reports per artifact, so it doesn't have to be correct immediately. Not sure if this is useful here since all the evaluation is performed as if there's only 1 guess. Maybe this could be treated as "immediate" and "final", which is roughly when the guesses would be anyway. This point should be made such that the reader understands that we can continuously update the position, and it's only the final, submitted position that actually has value.
-	\item The environment will be foggy / dusty in some places. Also lighting can vary, but that's true for any CV problem ... this probably isn't special
-\end{itemize}
+\subsubsection{Fire Extinguisher}
 
-TODO: Maybe talk about what's special about each of the artifacts? Namely, Randy has thermal (and is wearing the clothing shown), and the cell phone will have all of its radios on (with specific name for the wifi network being broadcast).
+The fire extinguisher artifact represents a typical common handheld fire extinguisher. This artifact also represents areas where other emergency equipment may be located. The fire extinguisher has its hose in the stored configuration. It may be found on the ground, on a work surface, or hanging from a wall. It will not be used during the scored runs.
 
-Also, talk about what the localization point means in each of these images. See Figure \ref{randy} for more information.
+\subsubsection{Survivor ("Randy")}
+
+The survivor artifact represents a human survivor, such as a trapped worker. A thermal manikin is used, and is wearing a high visibility jacket, work pants, and standard steel toed work boots. The manikin has heating elements in its hands and head to partially emulate a human's thermal signature. The manikin is not actuated and will not be playing auditory clues. The manikin is placed in a static sitting position against walls.
+
+\section{Our Approach}
+
+Our team's overall concept of operations is one of modular autonomy. We aim to develop a set of hardware and software components that can be rapidly reconfigured and adapted to support the needs of any particular environment. Individual modules can be upgraded or replaced as necessary. For mobility, modules such as removable battery packs, wheel assemblies, and drive electronics are used. For communication, custom nodes are developed, multiples of which can be stored on modular node dropper assemblies. For perception, this approach means the development of various sensing payloads with integrated software and computation that can be transferred between robots. These sensing payloads run modular state estimation and artifact detection and localization software which can adapt to the capabilities of each system.
+
+Within each sensing payload, we use a multimodal suite of sensors for artifact detection. Though a single sensor or category of sensors, such as RGB cameras, may be able to detect multiple types of artifacts, it is unlikely to be able to perform well in all conditions. Alternatively, individual sensors may be particularly well suited to detect a specific artifact easily, but may not detect others at all. For example, the survivor and cell phone artifacts emit a thermal signature that may be able to be detected in a thermal camera, leading to the localization of these artifacts even in cases of little to no light. A WiFi radio may be used to detect and localize which is beyond line of sight, but is incapable of detecting any other categories of artifacts. Using a multimodal suite of sensors with intelligent fusion allows us to exploit the strengths of each individual sensor and create a more accurate and robust overall system.
+
+The human supervisor is also considered a module in our system. Though each robot in the system is capable of autonomous operation, the human supervisor is able to combine course and map information reported from multiple robots and direct the exploration patterns of the fleet. Each robot also returns artifact information to the base station, which the human supervisor aggregates and verifies. Artifacts reports which have been approved by the human supervisor are sent to DARPA at the human supervisor's discretion, and are modified and resubmitted as more information becomes available if necessary.
 
 \begin{figure}
 	\centering
-	\begin{subfigure}{0.3\textwidth}
+	\begin{subfigure}{0.32\textwidth}
 		\includegraphics[width=\textwidth]{backpack_artifact.png}
-		\caption{Backpack Artifact}
+		\caption{Backpack}
 		\label{backpack}		
 	\end{subfigure}
 	\hfill
-	\begin{subfigure}{0.3\textwidth}
+	\begin{subfigure}{0.32\textwidth}
 		\includegraphics[width=\textwidth]{cell_phone_artifact.png}
-		\caption{Cell Phone Artifact}
+		\caption{Cell Phone}
 		\label{cell phone}
 	\end{subfigure}	
 	\hfill
-	\begin{subfigure}{0.3\textwidth}
+	\begin{subfigure}{0.32\textwidth}
 		\includegraphics[width=\textwidth]{drill_artifact.png}
-		\caption{Drill Artifact}
+		\caption{Drill}
 		\label{drill}
 	\end{subfigure}
 	\\
-	\begin{subfigure}{0.45\textwidth}
+	\begin{subfigure}{0.47\textwidth}
 		\includegraphics[width=\textwidth]{fire_extinguisher_artifact.png}
-		\caption{Fire Extinguisher Artifact}
+		\caption{Fire Extinguisher}
 		\label{fire extinguisher}
 	\end{subfigure}	
 	\hfill
-	\begin{subfigure}{0.45\textwidth}
+	\begin{subfigure}{0.47\textwidth}
 		\includegraphics[width=\textwidth]{randy_artifact.png}
-		\caption{Survivor Artifact ("Randy")}
+		\caption{Survivor ("Randy")}
 		\label{randy}
 	\end{subfigure}	
-	\caption{Tunnel circuit artifacts}
+	\caption[Tunnel Circuit artifacts]{The Figure depicts the 5 Tunnel Circuit artifacts. The survivor, cell phone, and backpack artifacts are common to all 3 circuit events. Each circuit consists of an additional 2 circuit-specific artifacts, which were the fire extinguisher and drill for the Tunnel Circuit. All 9 artifacts will be used during the final event.}
 	\label{tunnel artifacts}
 \end{figure}
 

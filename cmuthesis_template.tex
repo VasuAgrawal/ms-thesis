@@ -81,39 +81,33 @@ Rogerio Bonatti
 
 \maketitle
 
-%\begin{dedication}
-%For my dog
-%\end{dedication}
-
 \pagestyle{plain} % for toc, was empty
 
 %% Obviously, it's probably a good idea to break the various sections of your thesis
 %% into different files and input them into this file...
 
 \begin{abstract}
-\begin{enumerate}
-	\item People (first responders and warfighters) need to gain rapid situational awareness about unknown subterranean environments.
-	\item This is typically done by sending people in.
-	\item These environments are very poor (rough terrain, terrible lighting, etc), making it difficult for standard robots / robot algorithms.
-	\item This work presents the development of a multimodal object detection and localization system.
-	\item Specifically, we cover the development of two iterations of a modular sensing platform, algorithms to detect and localize artifacts across multiple sensing modalities, and data transmission techniques to ensure timely updates for human operators.
-	\item We show that the use of multiple sensors and sensing modalities is necessary and advantageous in detecting and localizing objects as a form of situational awareness in these difficult underground environments.
-	\item Also, this localization system is aware of slam updates / key poses, and can maintain global consistency with the SLAM setup.
-	\item Final evaluations are provided against the DARPA SubT challenge tunnel circuit environment ground truth.
-\end{enumerate}
+Rapid situational awareness is the key to enabling a successful response from first responders during an emergency, where time is of the essence. Emergency personnel are often sent into incident scenes to gather information, but this is often a dangerous and slow process. Subterranean environments are particularly challenging due to additional hazards such as difficult terrain, low visiblity, and outdated or incomplete maps. This work covers the development of a multimodal artifact detection and localization system to help provide situational awareness in subterranean environments.
+
+We cover the development of two iterations of a modular sensing platform, algorithms to accurately detect and localize artifacts across multiple sensing modalities, and data transmission techniques to ensure timely updates for human operators from multiple robots in a fleet. Reported information is continually refined with new information from SLAM systems, ensuring global consistency is maintained. We demonstrate that the use of multiple sensors and sensing modalities is advantageous in reporting accurate and timely information. All evaluation is performed with data collected during the DARPA Subterranean Challenge Tunnel Circuit, where the proposed system was used to detect more than twice the number of artifacts of the next highest performing team, and where we won first place and an award for the most accurate artifact detected.
 \end{abstract}
 
 \begin{acknowledgments}
-\begin{itemize}
-	\item George
-	\item Ratnesh
-	\item thesis committee
-	\item subt team / airlab
-	\item kosbie / 112 squad
-	\item roboclub people
-	\item darpa subt challenge for paying for this?
-	\item Justin also wanted to be acknowledged for putting up with me
-\end{itemize}
+	I want to start by thanking Prof. George Kantor for giving me the chance to get involved with academic research as a freshman, and allowing me chance to experience the full cycle of robotics systems research and development in a single summer. I appreciate his mentorship and guidance and am incredibly grateful for the opportunity, which played a large part in shaping my academic path moving forward. 
+	
+	I'd also like to thank Ratnesh Madaan for introducing me to Basti, the Air Lab, and SubT, and without whom I'd likely still be looking for a thesis advisor. I've had a wonderful experience these past two years and I'm grateful to everyone in the Air Lab who's made my stay a welcome one.
+	
+	I'd like to thank my entire committee for their invaluable advice throughout this thesis process. It's taken than longer than I (and I'm sure they) would have liked, and I appreciate their patience and support through this endeavor.
+	
+	Of course, SubT is a team effort, and it wouldn't have been possible without each and every member of the team. I cherish the time I was able to spend building robots and debugging code with everyone, and look forward to being able to work with members of this incredibly talented group of people again. I also appreciate the funding received from DARPA and other team sponsors for allowing me to work on this project and play with some incredibly cool toys.
+	
+	Finally, I'd like to thank my friends and family for their moral support during thesis writing, and for making sure  that I don't take yet another semester to complete it. I particularly appreciate the time that Justin George, Bob Debortoli, and Bill Drozd put towards proofreading drafts and appreciate their comments.
+	
+\begin{center}
+Thanks everyone!
+\end{center}
+
+	
 \end{acknowledgments}
 
 \tableofcontents

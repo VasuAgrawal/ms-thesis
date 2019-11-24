@@ -7,9 +7,9 @@ During the Tunnel Circuit, we deployed our complete system, comprising 2 ground 
 	\begin{adjustbox}{max width=.95\textwidth}
 		\csvreader[
 		respect underscore=true,
-		tabular=|l|c|c|,
+		tabular=|l|l|c|c|,
 		late after line=\\\hline,
-		table head=\hline \textbf{Course Name} & \textbf{Artifact Configuration} & \textbf{Official Score}\\\hline,
+		table head=\hline \textbf{Date} & \textbf{Course Name} & \textbf{Artifact Configuration} & \textbf{Official Score}\\\hline,
 		]{final_scores.csv}{}{\csvlinetotablerow}
 	\end{adjustbox}
 	\caption{Official scores from Tunnel Circuit}
