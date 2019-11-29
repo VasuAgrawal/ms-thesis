@@ -319,10 +319,10 @@ Networks using either MobileNet V1 or Mobilenet V2 as a feature extractor, SSD o
 
 COCO evaluation metrics were used to quantify the performance of each network. The overall loss plot for each network (in Figure \ref{rgb_loss}) indicates that each network reached convergence by approximately 300k steps. The COCO metrics for each network configuration at 300k steps are given in Table \ref{rgb_training}. The table indicates that while the SSD Lite MNV2 Focal configuration had the best overall performance, all of the networks performed comparably in the majority of the evaluation metrics. As inference speed was a priority, using guidance from the previous benchmarking results we decided to use the SSD MNV1 Hard configuration for the Tunnel Circuit.
 
-% TODO: add a legend and title and stuff
 \begin{figure}	
 	\centering
-	\includegraphics[width=0.5\textwidth]{rgb_loss.png}
+	\includegraphics[width=0.45\textwidth]{rgb_loss.png}
+	\includegraphics[width=0.45\textwidth]{training_legend.png}
 	\caption[RGB network loss values]{Loss values for all 8 configurations, with a smoothing of 0.95 applied in TensorBoard. X axis indicates number of steps. Y axis indicates overall loss value.}
 	\label{rgb_loss}
 \end{figure}
