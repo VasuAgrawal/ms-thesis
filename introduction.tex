@@ -1,33 +1,27 @@
 \chapter{Introduction}
 
-Rapid situational awareness is the key to enabling a successful response from first responders during an emergency. Incident command uses all information available to them to make decisions and coordinate the first responders. First responders are often sent into the incident scene to gather information, but the nature of emergencies makes this process dangerous and can risk additional lives. Subterranean environments pose a number of additional hazards and challenges, such as outdated maps, dangerous terrain, and low visibility, making them particularly difficult to send humans into safely. For example, emergency personnel cannot safely explore beyond fires in coal mines, and are thus unable to determine the number of people or quality of terrain that may be behind them. Autonomous systems have the potential to significantly improve the quality and timeliness of the situational awareness gained in challenging subterranean environments, and by doing so can reduce risk to human lives.
-
-% Livestream: https://www.youtube.com/watch?v=rMW-wZTecqE (2:47:00 mark or so for the MSHA presentation)
-% NYC fire chief: https://www.youtube.com/watch?v=4I4J67jxODE
+Rapid situational awareness is crucial to enabling a successful response from first responders during an emergency. Incident command uses all information available to them to make decisions and coordinate the first responders. First responders are often sent into the incident scene to gather information, but the nature of emergencies makes this process dangerous and can risk additional lives \cite{whysubtmatters}. Subterranean environments pose a number of additional hazards and challenges, such as outdated maps, dangerous terrain, and low visibility, making them particularly difficult to send humans into safely. For example, emergency personnel cannot safely explore beyond fires in coal mines, and are thus unable to determine the number of people or quality of terrain that may be behind them \cite{mshapresentation}. Autonomous systems have the potential to significantly improve the quality and timeliness of the situational awareness gained in challenging subterranean environments, and by doing so can reduce risk to human lives.
 
 \section{The DARPA Subterranean Challenge (SubT)}
 
-The DARPA Subterranean Challenge was issue to spur the development of new technologies to explore these complex underground environments. Teams are challenged to propose new and innovative solutions for the unique perception, mobility, communication, and autonomy problems present in these environments. Teams compete in a series of 3 separate circuit events, each in a different type of subterranean environment, listed in Figure \ref{darpa_environments}. The highest performing teams will be invited to a final event which incorporates elements of each type of environment. In each event, teams are tasked with deploying systems which rapidly provide situational awareness, in the form of map data and locations of predetermined artifacts placed by DARPA.
+The DARPA (Defense Advanced Research Projects Agency) Subterranean Challenge was issued to spur the development of new technologies for exploring complex underground environments. Teams are challenged to propose new and innovative solutions for the unique perception, mobility, communication, and autonomy problems present in these environments. Teams compete in a series of 3 separate circuit events, each in a different type of subterranean environment, listed in Figure \ref{darpa_environments}. The highest performing teams will be invited to a final event which incorporates elements of each type of environment. In each event, teams are tasked with deploying systems which rapidly provide situational awareness, in the form of map data and locations of predetermined objects placed by DARPA. Each object ("artifact") represents a particular class of objects which are likely to be found in subterranean environments, such as those shown in Figure \ref{tunnel artifacts}.
 
 \begin{figure}	
 	\centering
 	\includegraphics[width=\textwidth]{darpa_environments.jpg}
-	\caption[DARPA Subterranean Challenge environments]{The Tunnel Circuit focuses on human made tunnel systems. The Urban Circuit focuses on urban environments such as mass transit and municipal infrastructure. The Cave Circuit focuses on naturally occurring cave systems.}
+	\caption[DARPA Subterranean Challenge environments]{The Tunnel Circuit focuses on human made tunnel systems. The Urban Circuit focuses on urban environments such as mass transit and municipal infrastructure. The Cave Circuit focuses on naturally occurring cave systems. Image from DARPA \cite{subtenvironments}.}
 	\label{darpa_environments}
 \end{figure}
 
-During each circuit event, teams have 60 minutes to deploy their systems in the environment. The deployment may consist of as many robots as the teams desire, but must be operated by a single human supervisor at the team's base station. Not all areas of the environment will be traversable for all types of robots, so teams are encouraged to develop systems with a variety of mobility capabilities. Communication with and coordination of each robot in the fleet is an additional challenge as no communication infrastructure is provided by DARPA. Autonomous exploration capability is advised to reduce operator load and eliminate a need for constant connectivity. The perception systems used to drive the autonomy should be able to handle a variety of challenging conditions, such as low visibility and variable lighting. Teams may be permitted multiple runs per event.
+During each circuit event, teams have 60 minutes to deploy their systems in the environment. The deployment may consist of as many robots as the teams desire, but must be operated by a single human supervisor at the team's base station. Not all areas of the environment will be traversable for all types of robots, so teams are encouraged to develop systems with a variety of mobility capabilities. Autonomous exploration capability is advised to reduce operator load and eliminate a need for constant connectivity. Communication with and coordination of each robot in the fleet is a challenge as no communication infrastructure is provided by DARPA.  The perception systems used to drive the autonomy should be able to handle a variety of challenging conditions, such as low visibility and variable lighting. This differs from typical perception benchmarks, such as ImageNet \cite{deng2009imagenet}, which ensure clean and high quality data. Teams may be permitted multiple runs per event.
 
-Before a team's run, DARPA places a predetermined and disclosed number of artifacts in the environment. The locations of specific points on each of these artifacts, referenced to a DARPA-defined frame, are surveyed and treated as ground truth. The location of each artifact and number of each artifact type is unknown to teams. Scoring for each competition event is based entirely on the number of artifacts which are correctly reported to DARPA within the 60 minute period. Teams must report the artifact's category and must report coordinates which are within 5m Euclidean distance of the ground truth for an artifact report to be considered correct. Teams may submit twice the number of artifact reports as there are artifacts in the environment. Artifact reports may be generated in whichever manner a team deems appropriate, such as randomly, by the human supervisor, or fully autonomously by the deployed system. Ties between multiple teams are broken by a number of factors, including the times artifacts were submitted, and the furthest artifacts detected.
-
-%https://subtchallenge.com/resources/SubT\_Challenge\_Tunnel\_Rules.pdf
-%https://subtchallenge.com/resources/SubT\_Tunnel\_Artifacts\_Specification.pdf
+Before a team's run, DARPA places a predetermined and disclosed number of artifacts in the environment. The locations of specific points on each of these artifacts, referenced to a DARPA-defined frame, are surveyed and treated as ground truth. The location of each artifact and number of each artifact type is unknown to teams. Scoring for each competition event is based entirely on the number of artifacts which are correctly reported to DARPA within the 60 minute period. Teams must report the artifact's category and must report coordinates which are within 5m Euclidean distance of the ground truth for an artifact report to be considered correct. Teams may submit twice the number of artifact reports as there are artifacts in the environment. Artifact reports may be generated in whichever manner a team deems appropriate, such as randomly, by the human supervisor, or fully autonomously by the deployed system. Ties between multiple teams are broken by a number of factors, including the times artifacts were submitted, and the furthest artifacts detected \cite{tunnel_rules}.
 
 \section{Tunnel Circuit Specifics}
 
 This work focuses specifically on artifact detection and localization in the context of the Tunnel Circuit. The Tunnel Circuit event took place between at the National Institute for Occupational Safety and Health Mining (NIOSH) site in Pittsburgh, PA, between August 15 and August 22 2019. DARPA divided the former coal mine into two separate courses, starting at the mine's two separate portals, Safety Research and Experimental. A map of the Safety Research course is shown in Figure \ref{tunnel_circuit_day_2}. Each team was allowed 2 runs in each course. The team's final score is a sum of the highest score from each course.
 
-20 artifacts were deployed by DARPA in each course. The placement and distribution of artifacts varied between each course and each run, as indicated in Table \ref{final_scores}. Five specific categories of artifacts were used at the Tunnel Circuit, shown in Figure \ref{tunnel artifacts} and described below. Each category of artifact is specified to only use the single model of object shown the figure.
+20 artifacts were deployed by DARPA in each course. The placement and distribution of artifacts varied between each course and each run, as indicated in Table \ref{final_scores}. Five specific categories of artifacts were used at the Tunnel Circuit. A single representative model of each artifact, shown in Figure \ref{tunnel artifacts}, was used. Specific model numbers for each representative object were distributed to teams in advance of the competition \cite{tunnel_artifacts}.
 
 \subsubsection{Backpack}
 
@@ -47,7 +41,41 @@ The fire extinguisher artifact represents a typical common handheld fire extingu
 
 \subsubsection{Survivor ("Randy")}
 
-The survivor artifact represents a human survivor, such as a trapped worker. A thermal manikin is used, and is wearing a high visibility jacket, work pants, and standard steel toed work boots. The manikin has heating elements in its hands and head to partially emulate a human's thermal signature. The manikin is not actuated and will not be playing auditory clues. The manikin is placed in a static sitting position against walls.
+The survivor artifact represents a human survivor, such as a trapped worker. A thermal manikin is used, and is wearing a high visibility jacket, work pants, and standard steel toed work boots. The manikin has heating elements in its hands and head to partially emulate a human's thermal signature. The manikin is not actuated and does not play auditory clues. The manikin is placed in a static sitting position against walls.
+
+\begin{figure}
+	\centering
+	\begin{subfigure}{0.32\textwidth}
+		\includegraphics[width=\textwidth,height=5.5cm,keepaspectratio]{backpack_artifact.png}
+		\caption{Backpack}
+		\label{backpack}		
+	\end{subfigure}
+	\hfill
+	\begin{subfigure}{0.32\textwidth}
+		\includegraphics[width=\textwidth,height=5.5cm,keepaspectratio]{cell_phone_artifact.png}
+		\caption{Cell Phone}
+		\label{cell phone}
+	\end{subfigure}	
+	\hfill
+	\begin{subfigure}{0.32\textwidth}
+		\includegraphics[width=\textwidth,height=5.5cm,keepaspectratio]{drill_artifact.png}
+		\caption{Drill}
+		\label{drill}
+	\end{subfigure}
+	\\
+	\begin{subfigure}{0.32\textwidth}
+		\includegraphics[width=\textwidth,height=5.5cm,keepaspectratio]{fire_extinguisher_artifact.png}
+		\caption{Fire Extinguisher}
+		\label{fire extinguisher}
+	\end{subfigure}
+	\begin{subfigure}{0.32\textwidth}
+		\includegraphics[width=\textwidth,height=5.5cm,keepaspectratio]{randy_artifact.png}
+		\caption{Survivor ("Randy")}
+		\label{randy}
+	\end{subfigure}	
+	\caption[Tunnel Circuit artifacts]{The Figure depicts the 5 Tunnel Circuit artifacts. The survivor, cell phone, and backpack artifacts are common to all 3 circuit events. Each circuit consists of an additional 2 circuit-specific artifacts, which were the fire extinguisher and drill for the Tunnel Circuit. All 9 artifacts will be used during the final event. The localization point in the images is the specific point surveyed by DARPA against which error will be measured. Images from DARPA \cite{tunnel_artifacts}.}
+	\label{tunnel artifacts}
+\end{figure}
 
 \section{Our Approach}
 
@@ -57,40 +85,7 @@ Within each sensing payload, we use a multimodal suite of sensors for artifact d
 
 The human supervisor is also considered a module in our system. Though each robot in the system is capable of autonomous operation, the human supervisor is able to combine course and map information reported from multiple robots and direct the exploration patterns of the fleet. Each robot also returns artifact information to the base station, which the human supervisor aggregates and verifies. Artifacts reports which have been approved by the human supervisor are sent to DARPA at the human supervisor's discretion, and are modified and resubmitted as more information becomes available if necessary.
 
-\begin{figure}
-	\centering
-	\begin{subfigure}{0.32\textwidth}
-		\includegraphics[width=\textwidth]{backpack_artifact.png}
-		\caption{Backpack}
-		\label{backpack}		
-	\end{subfigure}
-	\hfill
-	\begin{subfigure}{0.32\textwidth}
-		\includegraphics[width=\textwidth]{cell_phone_artifact.png}
-		\caption{Cell Phone}
-		\label{cell phone}
-	\end{subfigure}	
-	\hfill
-	\begin{subfigure}{0.32\textwidth}
-		\includegraphics[width=\textwidth]{drill_artifact.png}
-		\caption{Drill}
-		\label{drill}
-	\end{subfigure}
-	\\
-	\begin{subfigure}{0.47\textwidth}
-		\includegraphics[width=\textwidth]{fire_extinguisher_artifact.png}
-		\caption{Fire Extinguisher}
-		\label{fire extinguisher}
-	\end{subfigure}	
-	\hfill
-	\begin{subfigure}{0.47\textwidth}
-		\includegraphics[width=\textwidth]{randy_artifact.png}
-		\caption{Survivor ("Randy")}
-		\label{randy}
-	\end{subfigure}	
-	\caption[Tunnel Circuit artifacts]{The Figure depicts the 5 Tunnel Circuit artifacts. The survivor, cell phone, and backpack artifacts are common to all 3 circuit events. Each circuit consists of an additional 2 circuit-specific artifacts, which were the fire extinguisher and drill for the Tunnel Circuit. All 9 artifacts will be used during the final event.}
-	\label{tunnel artifacts}
-\end{figure}
+%TODO: add a figure here explaining the overall approach
 
 \section{Related Work}
 

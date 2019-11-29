@@ -11,7 +11,7 @@ The artifact detection and localization pipeline is responsible for converting t
 	Pipeline must run on-board, either on the Xavier (Mk. 0, Mk. 1), or on part of the NUC (drone) \\ \hline
 	Artifacts must be transmitted to base station reliably over a lossy wireless link \\  \hline
 	Pipeline should be capable of detecting all 5 types of artifacts (as shown in Figure \ref{tunnel artifacts}) \\ \hline
-	All artifacts which the robots pass by should be detected \\ \hline
+	All artifacts which the robots pass by (within 5m) should be detected \\ \hline
 	Pipeline should be identical or nearly identical on all payloads \\ \hline
 	Artifacts should be detected and reported to human supervisor in real-time \\ \hline
 \end{tabular}
@@ -25,8 +25,8 @@ The artifact detection and localization pipeline is responsible for converting t
 	\begin{adjustbox}{max width=.95\textwidth}
 		\begin{tabular}{ |l| } 
 			\hline
-State estimation system on all payloads would be LOAM \\ \hline
-Artifact detection and localization pipeline could not direct robots' exploration \\ \hline 
+State estimation system on all payloads would be LOAM \cite{zhang2014loam} \\ \hline
+Artifact detection and localization pipeline results would not feed the robots' waypoint planner \\ \hline 
 Artifacts are reported in robots' own frames and transformed to a single world frame at base station \\ \hline
 Robots will move at approximately 2 m/s \\ \hline
 A human supervisor would be available to verify artifact reports, and thus false positives are acceptable \\ \hline
@@ -36,7 +36,7 @@ A human supervisor would be available to verify artifact reports, and thus false
 	\label{software_assumptions}
 \end{table}
 
-An overview of the complete pipeline is given in Figure \ref{software_overview}. This pipeline runs identically on all 3 payloads with only minor configuration changes (e.g. sensor serial numbers), and sensor omissions where necessary (e.g. drone payload does not contain a thermal camera). All robots report artifacts to the GUI independently, and no information is shared between pipelines running on individual payloads.
+An overview of the complete pipeline is given in Figure \ref{software_overview}. This pipeline runs identically on all 3 payloads with only minor configuration changes, and sensor omissions where necessary (e.g. drone payload does not contain a thermal camera). All robots report artifacts to the GUI independently, and no information is shared between pipelines running on individual payloads to prevent overloading the communication network.
 
 \begin{figure}	
 	\centering
@@ -64,7 +64,7 @@ The pipeline consists of 2 major modules - the Signal Localizer and the Object D
 
 \section{LOAM Overview}
 
-One of the assumptions made during the initial design phases of the software pipeline was that LOAM would be the state estimation system used on all of our payloads. This simplified the development of the artifact detection and localization pipeline as we only needed to develop and test against a single state estimation system. The relevant interface details of LOAM (in the form of ROS frames and topics) are given below:
+One of the assumptions made during the initial design phases of the software pipeline was that LOAM \cite{zhang2014loam} would be the state estimation system used on all of our payloads. This simplified the development of the artifact detection and localization pipeline as we only needed to develop and test against a single state estimation system. The relevant interface details of LOAM (in the form of ROS \cite{quigley2009ros} frames and topics) are given below:
 
 \begin{description}
 	\item[/sensor] This is the robot's local frame, and is coincident with the Velodyne LIDAR's frame.
@@ -80,7 +80,7 @@ One of the assumptions made during the initial design phases of the software pip
 
 A 2D convolutional neural network based object detector runs on each of the RGB image stream to detect all artifact types except cell phones. To select the network, a variety of network architectures were benchmarked, identifying networks which would be capable of running at camera framerate on the NUC (for 1 RGB image stream) and on the Xavier (for 4 RGB image streams). Pretrained checkpoints for the fastest network types were finetuned using manually collected and annotated data. The best performing networks were selected for use in the pipeline.
 
-The TensorFlow Object Detection API was used for all network training and inference tasks. The API provides checkpoints for a large variety of popular network architectures, and has support from both Nvidia and Intel for optimizing networks trained with the API to run on their respective hardware platforms. The YOLO family of networks was not considered for use in the Artifact Detection and Localization pipeline due to the lack of support for it in the API.
+The TensorFlow Object Detection API \cite{huang2017speed} was used for all network training and inference tasks. The API provides checkpoints for a large variety of popular network architectures, and has support from both Nvidia and Intel for optimizing networks trained with the API to run on their respective hardware platforms. The YOLO \cite{redmon2018yolov3} family of networks was not considered for use in the Artifact Detection and Localization pipeline due to the lack of support for it in the API.
 
 \subsection{Network Benchmarking and Selection}
 
@@ -90,7 +90,7 @@ The TensorFlow Object Detection API was used to evaluate a large number of netwo
 
 Nvidia provides the TensorRT runtime to accelerate neural network inference on its platforms. Using the TensorRT runtime directly is typically a difficult and involved process. TF-TRT bindings are provided within TensorFlow to simplify the use of TensorRT for certain types of models trained with TensorFlow. After converting a network from TensorFlow to TF-TRT, supported subgraphs of the network will be converted into optimized TensorRT engines, while unsupported operations will execute natively in TensorFlow. Support is provided by Nvidia for models trained with the TensorFlow Object Detection API to ensure many model types can be converted using TF-TRT. 
 
-During conversion, all networks were optimized to use 16 bit floating precision, which typically achieves comparable network precision and accuracy as 32 bit precision while allowing for higher inference throughput. Batch sizes of 1 and 4 were used, representing configurations where images from each camera are processed sequentially, or a batch of images (one from each camera) is processed at once. A minimum segment size of 50 was used. Some networks failed to convert with these parameters and were ignored. Before benchmarking, all CPU and GPU cores on the Xavier were enabled (MAX-N mode) and had their frequency maximized. The fan was set to run at maximum speed to prevent overheating during test runs. 
+During conversion, all networks were optimized to use 16 bit floating precision, which typically achieves comparable network precision and accuracy as 32 bit precision while allowing for higher inference throughput. Batch sizes of 1 and 4 were used, representing configurations where images from each camera are processed sequentially, or a batch of images (one from each camera) is processed at once. A minimum segment size of 50 was used. Some networks failed to convert to TF-TRT with these parameters and were ignored. Before benchmarking, all CPU and GPU cores on the Xavier were enabled (MAX-N mode) and had their frequency maximized. The fan was set to run at maximum speed to prevent overheating during test runs. 
 
 When benchmarking a network, a set of images (equivalent to the network's batch size) was first run through it to allow TensorFlow to optimize runtime parameters. The same set of images were then run through the network 100 times in a loop, and the inference times for each loop iteration were recorded. No limits were placed on the number of cores, percent of GPU, or percent of system memory available to the neural network. The average of the loop iteration times are presented in Table \ref{trt_graphs} for each network architecture which was successfully converted with TF-TRT. Table \ref{reference_graphs} shows the average loop iteration time for all unoptimized networks as a baseline, including networks which were unable to be converted.
 
@@ -241,11 +241,11 @@ The dataset used to train the network used during the Tunnel Circuit was trained
 		\caption{STIX Mine}
 		\label{environment_stix}
 	\end{subfigure}	
-	\caption[Representative dataset collection environment images]{A representative image for each environment in the Tunnel Circuit dataset is shown in the Figure. All images except Figure \ref{environment_catacombs} were captured from payloads. Figure \ref{environment_catacombs} was captured with the handheld setup.}
+	\caption[Representative dataset collection environment images]{A representative image for each environment in the Tunnel Circuit dataset is shown in the Figure. All images except Figure \ref{environment_catacombs} were captured from payloads. Figure \ref{environment_catacombs} was captured with the handheld setup. Bokeh effects visible in Figure \ref{environment_catacombs} and Figure \ref{environment_colorado} are due to dust accumulation on the lens. Noise in Figure \ref{environment_tour_ed} is due to dust in the air being illuminated by the payload's bright LEDs.}
 	\label{environments}
 \end{figure}
 
-Handheld data was collected by placing an artifact in a variety of locations and poses around the environment and recording short video clips while moving the handheld setup around. For each video clip, the cameras started recording when very close to the artifacts, and then moved backwards. The cameras were also moved around to capture a variety of viewpoints while ensuring that the artifact always stayed in frame. Video clips were typically less than 15 seconds long, and typically only had a single artifact visible at a time. A small number of video clips were gathered with multiple artifacts in close proximity.
+Handheld data was collected by placing an artifact in a variety of locations and poses around the environment and recording short video clips while moving the handheld setup around. For each video clip, the cameras started recording when very close to the artifacts, and then moved backwards. The cameras were also moved around to capture a variety of viewpoints while ensuring that the artifact always stayed in frame. Video clips were typically less than 15 seconds long, and typically only had a single artifact visible at a time. It was assumed that this would be the case in the Tunnel Circuit due to the small number of artifacts (20) and large traversal distance (up to 4km). This assumption was not confirmed by DARPA. For safety, a small number of video clips were gathered with multiple artifacts in close proximity. 
 
 Video from the payloads was collected by recording video feeds from all cameras on the robot during both autonomous exploration and teleoperation in the test environments. Teleoperation ensured that all artifacts in the environment would be seen by the robot and at a slow and smooth pace, while autonomous exploration generated data with realistic issues, such as motion blur and rolling shutter effects in a number of frames. Artifacts would be spread through the environment prior to the run and were not moved while data was being gathered. Payload videos typically exceeded 20 minutes each and only had artifacts visible in a small number of frames, but served as valuable source of realistic data and negative examples for the dataset.
 
@@ -282,9 +282,9 @@ The video clips gathered from the handheld devices were collected in a way to be
 	\label{semi_automatic_labeling}
 \end{figure}
 
-A few parameters were added to the labeling program to trade off between labeling accuracy and speed. The tracker performance could be modified with a flag to change the scale of the image used for tracking. Downsampling the image resulted in a faster tracker framerate, but at occasionally reduced quality. The tracker type could also be changed for each video clip. We determined that, of the trackers we considered (those available in the OpenCV contrib library), the CSRT tracker offered the best tracking accuracy while maintaining a reasonable framerate (typically around 30 fps on a laptop) at native resolution, and thus it was used for all labeled video clips. Only every 5th labeled video frame was added to the dataset to reduce redundancy between samples.
+A few parameters were added to the labeling program to trade off between labeling accuracy and speed. The tracker performance could be modified with a flag to change the scale of the image used for tracking. Downsampling the image resulted in a faster tracker framerate, but at occasionally reduced quality. The tracker type could also be changed for each video clip. We determined that, of the trackers we considered (those available in the OpenCV contrib library \cite{opencvcontrib}), the CSRT tracker \cite{lukezic2017discriminative} offered the best tracking accuracy while maintaining a reasonable framerate (typically around 30 fps on a laptop) at native resolution, and thus it was used for all labeled video clips. Only every 5th labeled video frame was added to the dataset to reduce redundancy between samples.
 
-The semi-automated labeling pipeline requires the handheld video to be recorded in a specific way to ensure a good tracker initialization. Videos recorded from the payloads on each robot do not have this property and must be labeled manually. To speed up the manual labeling process, a second custom labeling program was developed. Labelers watch the video at an accelerated speed until they see an artifact. They then step backwards in the video until the artifact first entered the frame, and begin labeling every 5th frame. After drawing a box around an artifact (two clicks), the class can be assigned by pressing a single key (unique per class) on the keyboard. The last assigned class is preserved between frames to simplify the common case of only a single artifact being visible in frame. A tracker was not used to propagate labels between frames due to time constraints, but was the labelers' most requested feature. All labeled images, from both the semi-automated and manual labeling programs, were validated by two additional labelers to ensure consistent, high quality labels.
+The semi-automated labeling pipeline requires the handheld video to be recorded in a specific way to ensure a good tracker initialization, as described in the previous section. Videos recorded from the payloads on each robot do not have the all of the artifacts visible in the beginning and throughout the entire video, and thus and must be labeled manually. To speed up the manual labeling process, a second custom labeling program was developed. Labelers watch the video at an accelerated speed until they see an artifact. They then step backwards in the video until the artifact first entered the frame, and begin labeling every 5th frame. After drawing a box around an artifact (two clicks), the class can be assigned by pressing a single key (unique per class) on the keyboard. The last assigned class is preserved between frames to simplify the common case of only a single artifact being visible in frame. A tracker was not used to propagate labels between frames due to time constraints, but was the labelers' most requested feature. All labeled images, from both the semi-automated and manual labeling programs, were validated by two additional labelers to ensure consistent, high quality labels.
 
 During the labeling process, we discovered the cell phone artifact was particularly difficult to label due to its small size, dark color which did not offer significant contrast to the environment, and large appearance variation due to the video being played on it. We speculated that a neural network would have similar issues when attempting to detect the cell phone, and thus did not label a significant number of cell phones in RGB images during the labeling process.
 
@@ -313,12 +313,13 @@ Not all labeled images were used to train networks for the Tunnel Circuit. The s
 
 All neural network training was performed using the TensorFlow Object Detection API. The benchmarks in Table \ref{trt_graphs} and Table \ref{openvino_graphs} indicated that the MobileNet + SSD family of networks would offer the highest framerates, so a number of configurations using MobileNet were trained. All network configuration files were derived from checkpoint files available in the TensorFlow Object Detection API, with all values except those mentioned left as provided. Each configuration used a batch size of 12, an input image size of 640 x 360, and the random horizontal flip, random brightness adjustment, random contrast adjustment, and ssd random crop data augmentations provided by the API with their default parameters. The RMSProp optimizer was used to train all networks, with a decay of 0.9, a momentum value of 0.9, an epsilon value of 0.9, and an exponentially decaying learning rate with an initial learning rate of 0.004, 500000 decay steps, and a decay factor of 0.95. A score threshold of 0.4 was used for non maximum suppression.
 
-Networks using either MobileNet V1 or Mobilenet V2 as a feature extractor, SSD or SSD Lite as an object detection head, and focal loss or hard example mining as a loss function were trained, resulting in 8 separate configurations. Each network was in initialized using checkpoints provided by the TensorFlow Object Detection API, which are pretrained for classification on ImageNet and then trained for object detection on COCO. All configurations were trained for a week with a single GPU for each network on an AWS p3.16xlarge instance. As no limit was placed on the number of steps for each network, checkpoints were kept every 4 hours of training to allow a checkpoint to be selected during evaluation from any point in the training.
+Networks using either MobileNet V1 or Mobilenet V2 as a feature extractor, SSD or SSD Lite as an object detection head, and focal loss or hard example mining as a loss function were trained, resulting in 8 separate configurations. Each network was initialized using checkpoints provided by the TensorFlow Object Detection API, which are pretrained for classification on ImageNet and then trained for object detection on COCO. All configurations were trained for a week with a single GPU for each network on an AWS p3.16xlarge instance. As no limit was placed on the number of steps for each network, checkpoints were kept every 4 hours of training to allow a checkpoint to be selected during evaluation from any point in the training.
 
 \subsection{Evaluation}
 
 COCO evaluation metrics were used to quantify the performance of each network. The overall loss plot for each network (in Figure \ref{rgb_loss}) indicates that each network reached convergence by approximately 300k steps. The COCO metrics for each network configuration at 300k steps are given in Table \ref{rgb_training}. The table indicates that while the SSD Lite MNV2 Focal configuration had the best overall performance, all of the networks performed comparably in the majority of the evaluation metrics. As inference speed was a priority, using guidance from the previous benchmarking results we decided to use the SSD MNV1 Hard configuration for the Tunnel Circuit.
 
+% TODO: add a legend and title and stuff
 \begin{figure}	
 	\centering
 	\includegraphics[width=0.5\textwidth]{rgb_loss.png}
@@ -343,7 +344,7 @@ COCO evaluation metrics were used to quantify the performance of each network. T
 
 \subsection{Inference}
 
-The selected RGB network is used for inference on each platform by first optimizing it as described in the benchmarking section with either TensorRT or OpenVINO, and then using a custom inference node to feed images through the network. When inferring from multiple streams, a set of images containing one per stream is passed to the network at a time. A list of detected objects is published for each frame, containing bounding boxes, a classification, and a classification confidence. An empty list is published if no objects are detected.
+The selected RGB network is used for inference on each platform by first optimizing it as described in the benchmarking section with either TensorRT or OpenVINO, and then using a custom inference node to feed images through the network. When inferring on images from multiple cameras, batch inference is done on a set of images containing one image from each camera. A list of detected objects is published for each frame, containing bounding boxes, a classification, and a classification confidence. An empty list is published if no objects are detected.
 
 \section{Object Detector (Thermal)}
 
@@ -383,19 +384,19 @@ For each rendered image, the renderer computes the position of the camera in the
 \begin{figure}
 	\centering
 	\begin{subfigure}{0.32\textwidth}
-		\includegraphics[width=\textwidth]{inflate_1.png}
+		\includegraphics[width=\textwidth]{inflate_1_colormapped.png}
 		\caption{1 pixel inflation}
 		\label{inflate_1}
 	\end{subfigure}		
 	\hfill
 	\begin{subfigure}{0.32\textwidth}
-		\includegraphics[width=\textwidth]{inflate_4.png}
+		\includegraphics[width=\textwidth]{inflate_4_colormapped.png}
 		\caption{4 pixel inflation}
 		\label{inflate_4}		
 	\end{subfigure}
 	\hfill
 	\begin{subfigure}{0.32\textwidth}
-		\includegraphics[width=\textwidth]{inflate_8.png}
+		\includegraphics[width=\textwidth]{inflate_8_colormapped.png}
 		\caption{8 pixel inflation}
 		\label{inflate_8}
 	\end{subfigure}
@@ -418,13 +419,13 @@ These results show that the output from the LIDAR renderer is either on par with
 	\end{subfigure}		
 	\hfill
 	\begin{subfigure}{0.32\textwidth}
-		\includegraphics[width=\textwidth]{rs_front_example_2019-10-16-00-51-04_ref.png}
+		\includegraphics[width=\textwidth]{rs_front_example_2019-10-16-00-51-04_ref_colormapped.png}
 		\caption{Mk. 1 Front Depth}
 		\label{lidar_front_ref}		
 	\end{subfigure}
 	\hfill
 	\begin{subfigure}{0.32\textwidth}
-		\includegraphics[width=\textwidth]{rs_front_example_2019-10-16-00-51-04_render.png}
+		\includegraphics[width=\textwidth]{rs_front_example_2019-10-16-00-51-04_render_colormapped.png}
 		\caption{Mk. 1 Front Rendered}
 		\label{lidar_front_render}
 	\end{subfigure}
@@ -436,13 +437,13 @@ These results show that the output from the LIDAR renderer is either on par with
 	\end{subfigure}		
 	\hfill
 	\begin{subfigure}{0.32\textwidth}
-		\includegraphics[width=\textwidth]{rs_left_example_2019-10-16-00-51-02_ref.png}
+		\includegraphics[width=\textwidth]{rs_left_example_2019-10-16-00-51-02_ref_colormapped.png}
 		\caption{Mk. 1 Left Depth}
 		\label{lidar_left_ref}		
 	\end{subfigure}
 	\hfill
 	\begin{subfigure}{0.32\textwidth}
-		\includegraphics[width=\textwidth]{rs_left_example_2019-10-16-00-51-02_render.png}
+		\includegraphics[width=\textwidth]{rs_left_example_2019-10-16-00-51-02_render_colormapped.png}
 		\caption{Mk. 1 Left Rendered}
 		\label{lidar_left_render}
 	\end{subfigure}
@@ -454,13 +455,13 @@ These results show that the output from the LIDAR renderer is either on par with
 	\end{subfigure}		
 	\hfill
 	\begin{subfigure}{0.32\textwidth}
-		\includegraphics[width=\textwidth]{rs_back_example_2019-10-16-00-33-41_ref.png}
+		\includegraphics[width=\textwidth]{rs_back_example_2019-10-16-00-33-41_ref_colormapped.png}
 		\caption{Mk. 1 Back Depth}
 		\label{lidar_back_ref}		
 	\end{subfigure}
 	\hfill
 	\begin{subfigure}{0.32\textwidth}
-		\includegraphics[width=\textwidth]{rs_back_example_2019-10-16-00-33-41_render.png}
+		\includegraphics[width=\textwidth]{rs_back_example_2019-10-16-00-33-41_render_colormapped.png}
 		\caption{Mk. 1 Back Rendered}
 		\label{lidar_back_render}
 	\end{subfigure}		
@@ -481,19 +482,19 @@ This fusion keeps LIDAR data whenever the reported RealSense data is either not 
 \begin{figure}
 	\centering
 	\begin{subfigure}{0.32\textwidth}
-		\includegraphics[width=\textwidth]{rs_back_example_2019-10-16-00-33-41_ref.png}
+		\includegraphics[width=\textwidth]{rs_back_example_2019-10-16-00-33-41_ref_colormapped.png}
 		\caption{Mk. 1 Back Depth}
 		\label{combined_depth_realsense}		
 	\end{subfigure}
 	\hfill
 	\begin{subfigure}{0.32\textwidth}
-		\includegraphics[width=\textwidth]{rs_back_example_2019-10-16-00-33-41_render.png}
+		\includegraphics[width=\textwidth]{rs_back_example_2019-10-16-00-33-41_render_colormapped.png}
 		\caption{Mk. 1 Back Rendered}
 		\label{combined_depth_lidar}
 	\end{subfigure}	
 	\hfill
 	\begin{subfigure}{0.32\textwidth}
-		\includegraphics[width=\textwidth]{combined_depth.png}
+		\includegraphics[width=\textwidth]{combined_depth_colormapped.png}
 		\caption{Mk. 1 Back Combined}
 		\label{combined_depth_output}
 	\end{subfigure}		
@@ -510,48 +511,49 @@ For any potential artifact, evidence is only accumulated in the form of positive
 
 The object detection localizer consists of 3 main operations, separated into two threads. The first thread, running the key pose maintenance and detection backprojection tasks, is responsible for creating and maintaining a data structure which stores a 3d point cloud associated with each 2d detection with respect to a key pose. The second thread, running the clustering task, is responsible for extracting new Artifact Localizations from the data structure, updating existing ones, and publishing changes. The clustering task's execution time scales with the size of the data structure and thus runs in a separate thread, allowing all callbacks in the primary thread to be serviced in time.
 
-\subsubsection{Key Pose Maintenance}
+\subsubsection{Detection Key Pose Maintenance}
 
 The key pose maintenance task is responsible for populating and updating a data structure with key pose information from LOAM. When key poses are initially received, they contain a timestamp and an ID in addition to the pose information. Both pieces of metadata are stored alongside the key pose. The ID is used to update the corresponding key poses when a list of updated key poses is received from LOAM after a loop closure. The timestamp is made available to other tasks to be able to associate other sensor measurements to a key pose.
 	
 \subsubsection{Detection Backprojection}
 The detection backprojection task runs as a callback upon receiving a set of 2d object detections, a color image, an associated depth image, and camera intrinsics information. For each detection, the depth information and camera intrinsics are used to project all pixels which fall inside the bounding box through a pinhole model into a 3d point cloud in the camera frame. The point cloud is colored by the RGB image, and each point in the cloud is assigned an ID corresponding to the classification of the detection. The timestamp of the image frame is then used to look up the immediately preceding key pose in the structure built by the key pose maintenance task. The point cloud is then transformed to be in the key pose's frame, and is added to a list of point clouds associated with that particular key pose. The color image has the bounding box drawn on it, and is stored alongside the point cloud. The centroid of the point cloud is also computed and stored, to enable more efficient clustering. This backprojection process is identical for both RGB and thermal images.
 	
-It is important that the backprojected point clouds are stored relative to a particular key pose rather than relative to the robot's /map frame. The transform necessary to convert the point cloud into the key pose frame is obtained in two steps. First, the static transform from the camera to the LOAM sensor frame is combined with the /integrated\_to\_map frame at the image timestamp, yielding a transform from the camera frame to the /map frame. Then, the pose of the corresponding key pose (which is already in the /map frame) is used to create a transform from the camera frame to the key pose frame. Storing the backprojected point clouds relative to a key pose rather than directly in the /map frame allows the clouds to be more accurately transformed into the /map frame as the key poses are updated. By using the /integrated\_to\_map topic, we ensure that the error the eventual transformation into the /map frame is due to small IMU integration error between key poses, rather than a large global drift.
+It is important that the backprojected point clouds are stored relative to a particular key pose rather than relative to the robot's /map frame to maintain global consistency and handle loop closure events. The transform necessary to convert the point cloud into the key pose frame is obtained in two steps. First, the static transform from the camera to the LOAM sensor frame is combined with the /integrated\_to\_map frame at the image timestamp, yielding a transform from the camera frame to the /map frame. Then, the pose of the corresponding key pose (which is already in the /map frame) is used to create a transform from the camera frame to the key pose frame. Storing the backprojected point clouds relative to a key pose rather than directly in the /map frame allows the clouds to be more accurately transformed into the /map frame as the key poses are updated. By using the /integrated\_to\_map topic, we ensure that the error the eventual transformation into the /map frame is due to small IMU integration error between key poses, rather than a large global drift.
 	
-Some additional filtering is also performed during this step to improve the quality of data being stored. The robot's pose estimate must move by at least a small amount (7.5cm) between frames, or clouds are not generated at all. This threshold ensures that redundant information does not get stored if the robot is sitting still or moving very slowly. Additionally, depending on the source of depth information being used, different downsampling and depth cutoff parameters are used in the backprojection. Downsampling reduces the density of the backprojected point cloud by skipping certain pixels when backprojecting. Every 4th row and column is kept when utilizing dense RealSense depth information, while every 2nd row and column is kept when using the comparatively sparse LIDAR rendered depth information. The depth cutoff is used to discard any points which have depth values beyond a certain point, and is used to compensate for low accuracy in the depth values. A depth cutoff of 10m was selected, intended to only act as a cutoff for the LIDAR depth values as a lower cutoff was used in the Depth Combiner when fusing the RealSense depth data.
+Some additional filtering is also performed during this step to improve the quality of data being stored. The robot's pose estimate must move by at least a small amount (7.5cm) between frames, or clouds are not generated at all. This threshold ensures that redundant information does not get stored if the robot is sitting still or moving very slowly. Additionally, depending on the source of depth information being used, different downsampling and depth cutoff parameters are used in the backprojection. Downsampling reduces the density of the backprojected point cloud by skipping certain pixels when backprojecting. Every 4th row and column is kept when utilizing dense RealSense depth information, while every 2nd row and column is kept when using the comparatively sparse LIDAR rendered depth information. The depth cutoff is used to discard any points which have depth values beyond a certain point, and is used to compensate for low accuracy in the depth values. A depth cutoff of 10m was selected, intended to only act as a cutoff for the LIDAR depth values as a lower cutoff of 2.5m was used for the RealSense depth data in the Depth Combiner.
 	
 \subsubsection{Clustering}
 The clustering task continually (at 1 Hz) creates Artifact Localizations from the data structure populated by the backprojection task, and publishes updates for downstream nodes to use. First, the centroid of each backprojected point cloud is transformed into the /map frame using the updated pose of the corresponding key pose. This centroid cloud is then clustered using Euclidean clustering from PCL, with a cluster tolerance of 0.5m and a minimum cluster size of 3. These parameters group objects which have been detected a sufficient number of times (3) and are close enough (0.5m) together. The clustering is purely geometric, and does not account for the classification of the centroid. This choice enables the clustering process to be more robust to misclassification from the network, but in exchange sacrifices the ability to distinguish multiple objects of different types near each other.
 	
 The centroid of each cluster can be treated as an approximation for the centroid of each artifact that the robot has seen. However, the computed centroid of centroids is imprecise, and can be refined by integrating the complete point clouds for each detection. First, the clouds are transformed into the /map frame and aggregated into a single cloud for the cluster. The centroid of this cloud is then found, and used as the refined position of an Artifact Localization. This centroid differs from the one computed using the centroid of each point cloud as it will weight the centroids based on the number of points in the cloud, rather than weighting all centroids equally. While finding the centroid of the cluster point cloud, a majority vote is performed over the classifications to determine a label for the Artifact Localization. Finally, the color images (with bounding boxes) for each detection in the cluster are added to the Artifact Localization as evidence.
 	
-Once the complete list of Artifact Localizations has been created from the available data, it is compared against existing valid Artifact Localizations generated by previous iterations. New Artifact Localizations are matched pairwise against previous ones, again only considering Euclidean distance, using a threshold of 0.25m. Previous Artifact Localizations which are matched to new ones have their parameters updated with the ones of their match. Previous ones which were not matched are now considered invalid, and are marked as such, but are not forgotten. New Artifact Localizations which did not match any previous ones are given a new ID and stored as valid Artifact Localizations. All changes to Artifact Localizations (updates, invalidations, and new ones) are published, along with the IDs of each Artifact Localization. This process of publishing deltas in the list of Artifact Localizations is used to increase memory efficiency and reduce transmission bandwidth, and is used everywhere Artifact Localizations are published.
+Once the complete list of Artifact Localizations has been created from the available data, it is compared against existing valid Artifact Localizations generated by previous iterations. New Artifact Localizations are matched pairwise against previous ones, again only considering Euclidean distance, using a threshold of 0.25m. Previous Artifact Localizations which are matched to new ones have their parameters updated with the ones of their match. Previous ones which were not matched are now considered invalid, and are marked as such, but are not forgotten. New Artifact Localizations which did not match any previous ones are given a new ID and stored as new valid Artifact Localizations. All changes to Artifact Localizations (updates, invalidations, and new ones) are published, along with the IDs of each Artifact Localization. This process of publishing deltas in the list of Artifact Localizations is used to increase memory efficiency and reduce transmission bandwidth, and is used everywhere Artifact Localizations are published.
 	
 When publishing Artifact Localizations, only a small number of images are kept. Typically, an Artifact Localization will amass 50 or more detections from different cameras as the robot drives by an artifact. These images are highly redundant, and it is thus inefficient to transmit them all. Instead, only 4 selected images are published. The images are sorted by their capture timestamp and then evenly distributed into 4 chunks. The first image from each chunk is kept, resulting in images which show multiple perspectives of an artifact as the robot travels by. An example of 4 automatically selected images for an artifact is shown in Figure \ref{automatically_selected_images}.
 
 \begin{figure}
 	\centering
 	\begin{subfigure}{0.45\textwidth}
-		\includegraphics[width=\textwidth]{artifact_0019_image_00.png}
+		\includegraphics[width=\textwidth,height=4cm,keepaspectratio]{artifact_0019_image_00.png}
 		\caption{Survivor Image 1}
 		\label{survivor_image_1}
 	\end{subfigure}		
 	\hfill
 	\begin{subfigure}{0.45\textwidth}
-		\includegraphics[width=\textwidth]{artifact_0019_image_01.png}
+		\includegraphics[width=\textwidth,height=4cm,keepaspectratio]{artifact_0019_image_01.png}
 		\caption{Survivor Image 2}
 		\label{survivor_image_2}
 	\end{subfigure}
 	\\
 	\begin{subfigure}{0.45\textwidth}
-		\includegraphics[width=\textwidth]{artifact_0019_image_02.png}
+		\centering
+		\includegraphics[width=\textwidth,height=4cm,keepaspectratio]{artifact_0019_image_02.png}
 		\caption{Survivor Image 3 (thermal)}
 		\label{survivor_image_3}
 	\end{subfigure}
 	\hfill
 	\begin{subfigure}{0.45\textwidth}
-		\includegraphics[width=\textwidth]{artifact_0019_image_03.png}
+		\includegraphics[width=\textwidth,height=4cm,keepaspectratio]{artifact_0019_image_03.png}
 		\caption{Survivor Image 4}
 		\label{survivor_image_4}
 	\end{subfigure}		
@@ -561,15 +563,15 @@ When publishing Artifact Localizations, only a small number of images are kept. 
 
 \section{WiFi Scanner}
 
-The WiFi scanner uses the WiFi modules on the NUC (Mk. 0, Mk. 1, drone) and the Xavier (Mk. 1) to search for nearby devices acting as access points. Scans are run using wpa\_supplicant and are run continuously. Each scan produces a list of nearby access points with a MAC address, SSID (if available), and an RSSI value. The scan results are timestamped with the completion time of the scan, are assigned a frame ID coincident with the LOAM sensor, and are published immediately. Each scan takes approximately 3 seconds to complete, and thus Mk. 0 and the drone payloads publish scan results at approximately .35 Hz while Mk. 1 is able to publish at approximately double the rate, between 0.6 - 0.8 Hz. Other WiFi interfaces are present on each robot, but are used for wireless communication. The process of WiFi scanning significantly reduces the available bandwidth for wireless communication and thus the WiFi scanner is only allowed to use interfaces which are otherwise unused.
+The WiFi scanner uses the WiFi modules on the NUC (Mk. 0, Mk. 1, drone) and the Xavier (Mk. 1) to search for nearby devices acting as access points. Scans are run using wpa\_supplicant and are run continuously. Each scan produces a list of nearby access points with a MAC address, SSID (if available), and an RSSI value. The scan results are timestamped with the completion time of the scan, are assigned a frame ID coincident with the LOAM sensor, and are published immediately. Each scan takes approximately 3 seconds to complete, and thus Mk. 0 and the drone payloads publish scan results at approximately .35 Hz while Mk. 1 is able to publish at approximately double the rate, between 0.6 - 0.8 Hz since it uses two WiFi chips to scan instead of just one. Other WiFi interfaces are present on each robot, but are used for wireless communication. The process of WiFi scanning significantly reduces the available bandwidth for wireless communication and thus the WiFi scanner is only allowed to use interfaces which are otherwise unused.
 
 \section{Signal Localizer}
 
-The signal localizer is produces Artifact Localizations for cell phone artifacts using the scan results from the WiFi scanner. A Bluetooth scanner was also implemented that could feed into the signal localizer, but was disabled due to low reliability. The structure of the signal localizer is quite similar to that of the object detection localizer, and thus it shares many of the same properties. Artifact Localizations are generated continually at 1 Hz, and are updated with new key pose information when available. When changes to the Artifact Localizations are significant, they are published to be used downstream.
+The signal localizer produces Artifact Localizations for cell phone artifacts using the scan results from the WiFi scanner. A Bluetooth scanner was also implemented that could feed into the signal localizer, but was disabled due to low reliability. The structure of the signal localizer is quite similar to that of the object detection localizer. Artifact Localizations are generated continually at 1 Hz, and are updated with new key pose information when available. When changes to the Artifact Localizations are significant, they are published to be used downstream.
 
 Like the object detection localizer, the signal localizer consists of 3 main operations, this time running in a single thread. The first two tasks maintain a data structure with key pose information and wifi scan results. The third task continually solves for positions of cell phone artifacts based on the scan results, and publishes Artifact Localizations for new detections or for significant position changes.
 
-\subsubsection{Key Pose Maintenance}
+\subsubsection{Signal Key Pose Maintenance}
 
 This task is functionally equivalent to the key pose maintenance task in the object detection localizer. Key poses are stored in a data structure alongside their timestamp and ID, and are updated with new poses from loop closures when available.
 
@@ -583,14 +585,14 @@ Each cell phone artifact has a unique MAC address, which allows multiple reading
 	
 The alternate solution relies on an important insight about the structure of the problem. We realized that the corridors in the tunnel circuit are quite narrow, meaning that the robot would, at some point, get within a meter or two of each artifact as it drove by them. Since the maximum allowable error for artifact positions was 5m, simply reporting the position of the robot with the highest RSSI value for each cell phone could be sufficient, using the assumption that RSSI was inversely proportional to the robot's distance from the artifact. This is the case for RSSI values from WiFi scanning, but is not true for Bluetooth. Results from Bluetooth scans would saturate the RSSI value when the robot was within approximately 20m of the cell phone, requiring a slightly more complex solution than simply finding the largest RSSI value.
 	
-First, the received RSSI values and corresponding robot poses are sorted by timestamp. Then, the highest RSSI value is found, and the list of RSSI values is segmented into chunks where the RSSI values equal the max. For WiFi, this will typically be a single pose, and can be returned immediately. For Bluetooth, this is typically a set of values for each time the robot drove by the cell phone (e.g. going into and coming out of the tunnel). The midpoint of the arc formed by the robot poses in each set is then found. The midpoints for each set are averaged together and reported as the position of the cell phone artifact. After positions are determined for each cell phone artifact, they are compared against those from the previous iteration, and updates are published in a manner similar to the object detection localizer if any new cell phones are present, or if any have moved significantly.
+First, the received RSSI values and corresponding robot poses are sorted by timestamp. Then, the highest RSSI value is found, and the list of RSSI values is segmented into contiguous groups where the RSSI values equal the maximum found. For WiFi, the maximum RSSI value will typically only occur for one  reading, so the corresponding pose can be returned immediately. For Bluetooth, the groups are typically a set of values for each time the robot drove by the cell phone (e.g. going into and coming out of the tunnel) since the RSSI readings saturate when within 10m to 20m of the cell phone. The midpoint of the arc formed by the robot poses in each set is then found. The midpoints for each set are averaged together and reported as the position of the cell phone artifact. After positions are determined for each cell phone artifact, they are compared against those from the previous iteration, and updates are published in a manner similar to the object detection localizer if any new cell phones are present, or if any have moved significantly.
 
 
 \section{State Estimate Delay Estimator}
 
 An implementation detail of LOAM is that the timestamps for the state estimates are based on a separate clock than other connected components. Subsecond precision for this clock comes from the IMU's internal clock, which starts counting from 0 at the IMU's startup, while the seconds count is derived from the NUC's system time. This scheme results in an offset between the two clocks of between 0 and 1 seconds, with the NUC's system clock always being ahead. This offset is different with each initialization of the state estimation system, but is consistent for the duration of a run (1 - 2 hours). All other clocks on a robot are synchronized to the NUC's system clock using Chrony, which results in an error on the order of hundreds of microseconds between clocks and is considered negligible.
 
-The state estimate delay estimator estimates the offset between the NUC's system clock and the state estimate clock and publishes the offset to be used by other nodes which use data from both the state estimate and other sensors. Subscribers subtract the published estimate from the timestamp of received sensor data when querying the robot or sensor pose corresponding to sensor data. The estimate is obtained by computing a moving average of the offset between the published timestamp and the NUC's system time for every twentieth state estimate received on the 200 /integrated\_to\_map topic. The estimate is published every update, resulting in a rate of 10 Hz. The following equation is used to update the estimated delay:
+The state estimate delay estimator estimates the offset between the NUC's system clock and the state estimate clock and publishes the offset to be used by other nodes which use data from both the state estimate and other sensors. Subscribers subtract the published estimate from the timestamp of received sensor data when querying the robot or sensor pose corresponding to sensor data. The estimate is obtained by computing a moving average of the offset between the published timestamp and the NUC's system time for every twentieth state estimate received on the 200 Hz /integrated\_to\_map topic. The estimate is published every update, resulting in a rate of 10 Hz. The following equation is used to update the estimated delay:
 
 \begin{equation} \label{delay_estimate_equation}
 d_{now} = 0.9 \ d_{prev} + 0.1 \ (t_{now} - t_{state})
@@ -618,7 +620,7 @@ For efficiency, each source publishes Artifact Localizations as a series of delt
 
 Every second, the accumulated Artifact Localizations from each stream are combined using a similar clustering mechanism to the object detection localizer. First, the position of each Artifact Localization will be added to a point cloud. No transformation is necessary as all points are already in the /map frame. Then, the point cloud is clustered using PCL's Euclidean clustering with a cluster tolerance of 0.5m and a minimum cluster size of 1. The cluster tolerance was kept the same as the object detection localizer, but the minimum cluster size was reduced to 1 to not ignore any artifacts reported by any source.
 	
-Artifact Localizations are combined based on their geometric clustering results. For each cluster, the classification of the new Artifact Localization is determined by summing the reported confidence from each constituent Artifact Localization and selecting the class with the highest confidence. The images for the new Artifact Localization are selected identically to the object detection localizer -- all images are sorted, and then 4 images are selected by choosing the first image in each fourth of the list. An example is shown in Figure \ref{automatically_selected_images}. The list of new Artifact Localizations is compared to the previous list of Artifact Localizations to determine a delta (consisting of updates, invalidations, and new Artifact Localizations), which is published and transmitted to the base station.
+Artifact Localizations are combined based on their geometric clustering results. For each cluster, the classification of the new Artifact Localization is determined by summing the reported confidence from each constituent Artifact Localization and selecting the class with the highest confidence. The images for the new Artifact Localization are selected identically to the object detection localizer -- all images are sorted, and then 4 images are selected by choosing the first image in each fourth of the list. Individual images may come from different sensing modalities. An example is shown in Figure \ref{automatically_selected_images}. The list of new Artifact Localizations is compared to the previous list of Artifact Localizations to determine a delta (consisting of updates, invalidations, and new Artifact Localizations), which is published and transmitted to the base station.
 	
 \section{Artifact Debouncer \& Compressor}
 
@@ -634,7 +636,7 @@ The lossy nature of the wireless communication link means that it is not guarant
 One reason for packets not reaching the base station may be that the robot is simply out of wireless communication range. Continually retrying transmission of dirty Artifact Localizations while out of communication range simply pollutes the wireless spectrum for other robots which may still be in range. Thus, linear backoff is employed. After each transmission attempt, an increasing predetermined time must pass before the dirty Artifact Localization can be transmitted again. The delay values are 5, 10, 15, 20, 25, and 30 seconds. Each transmission attempt increases the delay before the next transmission, up to a maximum of 30 seconds.
 	
 \subsubsection{Debounce}
-As a robot drives by an artifact, the artifact will be detected in multiple consecutive camera frames. The object detection localizer will continually update the position of the artifact, and will publish updates every second while the robot drives by. The signal localizer does the same thing as the robot approaches a cell phone. These updates propagate through the artifact aggregator and result in a large number of updates published as the system converges on an estimate of the artifact's location and class. Forwarding each of these updates directly to the base station would be wasteful as another update would follow a second later. This node debounces artifact updates by only marking Artifact Localizations as dirty once an update has not been received for at least 3 seconds. This threshold was selected to allow for some false negatives in detection as the robot drives by an artifact, but to still be low enough to ensure timely delivery to the base station.
+As a robot drives by an artifact, the artifact will be detected in multiple consecutive camera frames. The object detection localizer will continually update the position of the artifact, and will publish updates every second while the robot drives by. The signal localizer does the same thing as the robot approaches a cell phone. These updates propagate through the artifact aggregator and result in a large number of updates published as the system converges on an estimate of the artifact's location and class. Forwarding each of these updates directly to the base station would be wasteful as another update would follow a second later. This node debounces artifact updates by only marking Artifact Localizations as dirty once an update has not been received for at least 3 seconds. This typically happens after the robot has finished driving by the artifact and can no longer sense it, and is unlikely to update the Artifact Localization again.
 	
 \subsubsection{Grouping}
 Various factors, such as a loop closure event, can result in a large number of dirty Artifact Localizations that are ready to be transmitted. Towards the end of a robot's run, this can be close to 200 Artifact Localizations to transmit at once, or approximately 50 MB assuming an individual compressed Artifact Localization is 250 KB. Sending this much data in a single transmission is infeasible over a wireless link. Instead, a maximum of 10 dirty Artifact Localizations are transmitted at once.
@@ -654,14 +656,14 @@ Various factors, such as a loop closure event, can result in a large number of d
 	%			\label{bandwidth_usage_zoomed}
 	%		\end{subfigure}
 	\includegraphics[width=\textwidth]{bandwidth_usage_full.png}
-	\caption[Artifact transmission bandwidth usage]{The graph shows the bandwidth used by the compressor to try to transmit artifacts over an hour long competition run from Mk. 1 during the Tunnel Circuit. Features are incrementally added, starting with compression and retransmission, and then backoff, debounce, and grouping. None of these configurations have acknowledgements coming back from the base station, which is common when the robot is not within communication range of the base station. The final configuration (CRBDGA) shows the effect of simulating guaranteed acknowledgements.}
+	\caption[Artifact transmission bandwidth usage]{The graph shows the bandwidth used by the compressor to try to transmit artifacts over an hour long competition run from Mk. 1 during the Tunnel Circuit. Features are incrementally added, starting with compression and retransmission, and then backoff, debounce, and grouping. None of these configurations have acknowledgements coming back from the base station, which is common when the robot is not within communication range of the base station. The final configuration (CRBDGA, orange) shows the effect of simulating guaranteed acknowledgements.}
 	\label{bandwidth_usage}
 \end{figure}
 
 
 \section{Artifact Uncompressor}
 
-The artifact uncompressor is responsible for receiving and uncompressing messages sent by the artifact compressor nodes on each robot. A single instance of the uncompressor node runs on the base station and services messages sent by all artifact compressor nodes. Upon receipt of a message, the uncompressor will publish an acknowledgement with the transmission timestamp contained inside the message. The acknowledgement is only published once. If the acknowledgement is dropped in transit over the wireless link, the compressor will simply publish the artifact again at a later time. The uncompressor does not manipulate or store the messages it receives in any way - each compressed Artifact Localization received from the compressor node is simply uncompressed and broadcast on the base station for other nodes, such as the GUI, to use.
+The artifact uncompressor is responsible for receiving and uncompressing Artifact Localization messages sent by the artifact compressor nodes on each robot. Upon receipt of a message, the uncompressor will publish an acknowledgement with the transmission timestamp contained inside the received Artifact Localization message. The acknowledgement is only published once. If the acknowledgement is dropped in transit over the wireless link, the compressor will simply publish the artifact again at a later time. The uncompressor does not manipulate or store the messages it receives in any way - each compressed Artifact Localization received from the compressor node is simply uncompressed and broadcast on the base station for other nodes, such as the GUI, to use.
 
 \section{GUI}
 
